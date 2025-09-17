@@ -20,6 +20,7 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'trips_database.db');
+    print('Database path: $path');
     return await openDatabase(
       path,
       version: 1,
@@ -28,6 +29,7 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    print('Creating table trips...');
     await db.execute('''
       CREATE TABLE trips(
         id TEXT PRIMARY KEY,
@@ -39,18 +41,35 @@ class DatabaseHelper {
         isActive INTEGER NOT NULL
       )
     ''');
+    print('Table created successfully');
   }
 
   Future<int> insertTrip(Trip trip) async {
-    Database db = await database;
-    return await db.insert('trips', trip.toMap());
+    try {
+      Database db = await database;
+      print('Inserting trip: ${trip.toMap()}');
+      int id = await db.insert('trips', trip.toMap());
+      print('Insert successful, new row ID: $id');
+      return id;
+    } catch (e) {
+      print('Insert failed: $e');
+      rethrow;
+    }
   }
 
   Future<List<Trip>> getAllTrips() async {
-    Database db = await database;
-    List<Map<String, dynamic>> maps = await db.query('trips');
-    return List.generate(maps.length, (i) {
-      return Trip.fromMap(maps[i]);
-    });
+    try {
+      Database db = await database;
+      List<Map<String, dynamic>> maps = await db.query('trips');
+      print('Queried ${maps.length} trips from DB');
+      List<Trip> trips = List.generate(maps.length, (i) {
+        return Trip.fromMap(maps[i]);
+      });
+      print('Loaded trips: ${trips.map((t) => t.destination).toList()}');
+      return trips;
+    } catch (e) {
+      print('Load trips failed: $e');
+      return [];
+    }
   }
 }

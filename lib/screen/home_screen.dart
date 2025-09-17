@@ -24,10 +24,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadTrips() async {
+    print('Loading trips on init...');
     final loadedTrips = await dbHelper.getAllTrips();
     setState(() {
       trips = loadedTrips;
     });
+    print('Set trips count: ${trips.length}');
   }
 
   @override
@@ -213,19 +215,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _navigateToAddTrip(BuildContext context) async {
+    print('Navigating to add trip...');
     final Trip? newTrip = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const AddTripScreen(),
       ),
     );
-
+  
     // If a new trip was created, add it to the list
     if (newTrip != null) {
+      print('New trip returned: ${newTrip.destination}');
       setState(() {
         trips.insert(0, newTrip); // Add to beginning of list
       });
-      await dbHelper.insertTrip(newTrip);
+      print('Inserting to DB...');
+      try {
+        await dbHelper.insertTrip(newTrip);
+        print('DB insert completed successfully');
+      } catch (e) {
+        print('DB insert error: $e');
+        // Optionally remove from list if insert fails
+        setState(() {
+          trips.remove(newTrip);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save trip: $e')),
+        );
+      }
     }
   }
 }
