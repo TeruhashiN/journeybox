@@ -15,6 +15,7 @@ class JourneyBox extends StatelessWidget {
       title: 'JourneyBox',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const SplashScreen(),
+      
     );
   }
 }
