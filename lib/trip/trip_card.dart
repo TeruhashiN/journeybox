@@ -87,7 +87,7 @@ class TripCard extends StatelessWidget {
                       isUpcoming
                           ? "${trip.daysLeft} days left"
                           : isPast
-                          ? "Completed"
+                          ? "Finished"
                           : "Active",
                       style: GoogleFonts.poppins(
                         fontSize: 12,

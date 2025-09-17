@@ -537,6 +537,10 @@ class _AddTripScreenState extends State<AddTripScreen> {
     // Format dates
     final String formattedDates = _formatDateRange(_startDate!, _endDate!);
 
+    // ISO dates for dynamic calculation
+    final String startIso = "${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}";
+    final String endIso = "${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}";
+
     // Create new trip
     final newTrip = Trip(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -546,6 +550,8 @@ class _AddTripScreenState extends State<AddTripScreen> {
       imageUrl: '',
       daysLeft: daysLeft,
       isActive: daysLeft > 0,
+      startDate: startIso,
+      endDate: endIso,
     );
 
     setState(() {

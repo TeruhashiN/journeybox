@@ -23,8 +23,9 @@ class DatabaseHelper {
     print('Database path: $path');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -38,10 +39,20 @@ class DatabaseHelper {
         dates TEXT NOT NULL,
         imageUrl TEXT,
         daysLeft INTEGER NOT NULL,
-        isActive INTEGER NOT NULL
+        isActive INTEGER NOT NULL,
+        start_date TEXT,
+        end_date TEXT
       )
     ''');
     print('Table created successfully');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE trips ADD COLUMN start_date TEXT');
+      await db.execute('ALTER TABLE trips ADD COLUMN end_date TEXT');
+      print('Migration to version 2 completed: added start_date and end_date columns');
+    }
   }
 
   Future<int> insertTrip(Trip trip) async {
@@ -63,7 +74,9 @@ class DatabaseHelper {
       List<Map<String, dynamic>> maps = await db.query('trips');
       print('Queried ${maps.length} trips from DB');
       List<Trip> trips = List.generate(maps.length, (i) {
-        return Trip.fromMap(maps[i]);
+        final trip = Trip.fromMap(maps[i]);
+        trip.updateDynamicFields();
+        return trip;
       });
       print('Loaded trips: ${trips.map((t) => t.destination).toList()}');
       return trips;

@@ -5,8 +5,10 @@ class Trip {
   final String destination;
   final String dates;
   final String imageUrl;
-  final int daysLeft;
-  final bool isActive;
+  int daysLeft;
+  bool isActive;
+  String? startDate;
+  String? endDate;
 
   Trip({
     required this.id,
@@ -16,6 +18,8 @@ class Trip {
     required this.imageUrl,
     required this.daysLeft,
     required this.isActive,
+    this.startDate,
+    this.endDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -27,6 +31,8 @@ class Trip {
       'imageUrl': imageUrl,
       'daysLeft': daysLeft,
       'isActive': isActive ? 1 : 0,
+      'start_date': startDate,
+      'end_date': endDate,
     };
   }
 
@@ -39,6 +45,30 @@ class Trip {
       imageUrl: map['imageUrl'],
       daysLeft: map['daysLeft'],
       isActive: map['isActive'] == 1,
+      startDate: map['start_date'],
+      endDate: map['end_date'],
     );
+  }
+
+  void updateDynamicFields() {
+    if (startDate == null || endDate == null) return;
+
+    DateTime now = DateTime.now();
+    DateTime sDate = DateTime.parse(startDate!);
+    DateTime eDate = DateTime.parse(endDate!);
+
+    if (now.isBefore(sDate)) {
+      // Upcoming
+      daysLeft = sDate.difference(now).inDays;
+      isActive = false;
+    } else if (now.isAfter(eDate)) {
+      // Finished
+      daysLeft = -1;
+      isActive = false;
+    } else {
+      // Active
+      daysLeft = eDate.difference(now).inDays;
+      isActive = true;
+    }
   }
 }
