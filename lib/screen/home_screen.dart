@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../trip/trip_model.dart';
 import '../trip/trips_section.dart';
 import '../trip/add_trip_screen.dart'; // Add this import
+import '../trip/db_helper.dart';
 
 class HomeScreen extends StatefulWidget { // Change to StatefulWidget
   const HomeScreen({super.key});
@@ -12,36 +13,22 @@ class HomeScreen extends StatefulWidget { // Change to StatefulWidget
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  DatabaseHelper dbHelper = DatabaseHelper();
   // Move trips to state so we can update them
-  List<Trip> trips = [
-    Trip(
-      id: '1',
-      country: 'Japan',
-      destination: 'Tokyo & Kyoto',
-      dates: 'Sep 29 - Oct 5, 2025',
-      imageUrl: '',
-      daysLeft: 41,
-      isActive: true,
-    ),
-    Trip(
-      id: '2',
-      country: 'France',
-      destination: 'Paris & Nice',
-      dates: 'May 10 - May 20, 2026',
-      imageUrl: '',
-      daysLeft: 265,
-      isActive: true,
-    ),
-    Trip(
-      id: '3',
-      country: 'Thailand',
-      destination: 'Bangkok & Phuket',
-      dates: 'Dec 5 - Dec 15, 2023',
-      imageUrl: '',
-      daysLeft: -30,
-      isActive: false,
-    ),
-  ];
+  List<Trip> trips = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    final loadedTrips = await dbHelper.getAllTrips();
+    setState(() {
+      trips = loadedTrips;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -238,6 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         trips.insert(0, newTrip); // Add to beginning of list
       });
+      await dbHelper.insertTrip(newTrip);
     }
   }
 }
