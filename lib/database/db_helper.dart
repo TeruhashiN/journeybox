@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'trip_model.dart';
+import '../trip/trip_model.dart';
 
 class DatabaseHelper {
   static DatabaseHelper? _databaseHelper;

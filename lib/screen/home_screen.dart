@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../trip/trip_model.dart';
 import '../trip/trips_section.dart';
 import '../trip/add_trip_screen.dart'; // Add this import
-import '../trip/db_helper.dart';
+import '../database/db_helper.dart';
 
 class HomeScreen extends StatefulWidget { // Change to StatefulWidget
   const HomeScreen({super.key});
