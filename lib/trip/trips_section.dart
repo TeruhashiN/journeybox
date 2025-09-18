@@ -5,8 +5,9 @@ import 'trip_card.dart';
 
 class TripsSection extends StatefulWidget {
   final List<Trip> trips;
+  final VoidCallback? onRefresh;
 
-  const TripsSection({super.key, required this.trips});
+  const TripsSection({super.key, required this.trips, this.onRefresh});
 
   @override
   State<TripsSection> createState() => _TripsSectionState();
@@ -122,7 +123,7 @@ class _TripsSectionState extends State<TripsSection> with SingleTickerProviderSt
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             itemCount: tripsList.length,
             itemBuilder: (context, index) {
-              return TripCard(trip: tripsList[index]);
+              return TripCard(trip: tripsList[index], onRefresh: widget.onRefresh);
             },
           );
   }

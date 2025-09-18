@@ -85,4 +85,39 @@ class DatabaseHelper {
       return [];
     }
   }
+
+  Future<int> updateTrip(Trip trip) async {
+    try {
+      Database db = await database;
+      print('Updating trip: ${trip.toMap()}');
+      int rowsAffected = await db.update(
+        'trips',
+        trip.toMap(),
+        where: 'id = ?',
+        whereArgs: [trip.id],
+      );
+      print('Update successful, rows affected: $rowsAffected');
+      return rowsAffected;
+    } catch (e) {
+      print('Update failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<int> deleteTrip(String id) async {
+    try {
+      Database db = await database;
+      print('Deleting trip with id: $id');
+      int rowsAffected = await db.delete(
+        'trips',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      print('Delete successful, rows affected: $rowsAffected');
+      return rowsAffected;
+    } catch (e) {
+      print('Delete failed: $e');
+      rethrow;
+    }
+  }
 }

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'trip_model.dart';
 import 'trip_details_screen.dart';
+import 'edit_trip_screen.dart';
+import '../database/db_helper.dart';
 
 class TripCard extends StatelessWidget {
   final Trip trip;
+  final VoidCallback? onRefresh;
 
-  const TripCard({super.key, required this.trip});
+  const TripCard({super.key, required this.trip, this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +102,21 @@ class TripCard extends StatelessWidget {
                             : const Color(0xFF4299E1),
                       ),
                     ),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _editTrip(context);
+                      } else if (value == 'delete') {
+                        _deleteTrip(context);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    ],
+                    icon: const Icon(Icons.more_vert, color: Color(0xFF718096)),
+                    tooltip: 'Trip actions',
                   ),
                 ],
               ),
@@ -320,5 +338,55 @@ class TripCard extends StatelessWidget {
         builder: (context) => TripDetailsScreen(trip: trip),
       ),
     );
+  }
+
+  Future<void> _editTrip(BuildContext context) async {
+    final updatedTrip = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTripScreen(trip: trip),
+      ),
+    );
+
+    if (updatedTrip != null && onRefresh != null) {
+      onRefresh!();
+    }
+  }
+
+  Future<void> _deleteTrip(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Trip'),
+        content: Text('Are you sure you want to delete the trip to ${trip.destination}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final dbHelper = DatabaseHelper();
+      try {
+        await dbHelper.deleteTrip(trip.id);
+        if (onRefresh != null) {
+          onRefresh!();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Trip deleted successfully')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete trip: $e')),
+        );
+      }
+    }
   }
 }

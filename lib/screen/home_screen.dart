@@ -32,6 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Set trips count: ${trips.length}');
   }
 
+  Future<void> _refreshTrips() async {
+    await _loadTrips();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Trips List Section
               Expanded(
-                child: TripsSection(trips: trips),
+                child: TripsSection(trips: trips, onRefresh: _refreshTrips),
               ),
               const SizedBox(height: 20),
             ],
