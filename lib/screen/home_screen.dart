@@ -26,6 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadTrips() async {
     print('Loading trips on init...');
     final loadedTrips = await dbHelper.getAllTrips();
+    for (var trip in loadedTrips) {
+      trip.updateDynamicFields();
+    }
     setState(() {
       trips = loadedTrips;
     });
@@ -144,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStatsSection(List<Trip> trips) {
-    final activeTrips = trips.where((trip) => trip.isActive).length;
+    final activeTrips = trips.where((trip) => trip.daysLeft >= 0).length;
     final totalCountries = trips.map((trip) => trip.country).toSet().length;
 
     return Padding(
@@ -229,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
     // If a new trip was created, add it to the list
     if (newTrip != null) {
+      newTrip.updateDynamicFields();
       print('New trip returned: ${newTrip.destination}');
       setState(() {
         trips.insert(0, newTrip); // Add to beginning of list
