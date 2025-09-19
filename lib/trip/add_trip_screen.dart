@@ -445,11 +445,26 @@ class _AddTripScreenState extends State<AddTripScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    DateTime initial = DateTime.now();
+    DateTime first = DateTime(2000, 1, 1);
+    DateTime last = DateTime(2035, 12, 31);
+    DateTime? selectableFirst;
+
+    if (isStartDate) {
+      initial = _startDate ?? DateTime.now();
+    } else {
+      initial = _endDate ?? (_startDate ?? DateTime.now());
+      selectableFirst = _startDate;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2030),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+      selectableDayPredicate: selectableFirst != null ? (DateTime day) {
+        return !day.isBefore(selectableFirst!);
+      } : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
