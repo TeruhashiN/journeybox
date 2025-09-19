@@ -61,14 +61,36 @@ class TripCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              trip.country,
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF2D3748),
-                              ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    trip.country,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF2D3748),
+                                    ),
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _editTrip(context);
+                                    } else if (value == 'delete') {
+                                      _deleteTrip(context);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                  ],
+                                  icon: const Icon(Icons.more_vert, color: Color(0xFF718096)),
+                                  tooltip: 'Trip actions',
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 4),
                             Text(
                               trip.destination,
                               style: GoogleFonts.poppins(
@@ -112,21 +134,6 @@ class TripCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _editTrip(context);
-                          } else if (value == 'delete') {
-                            _deleteTrip(context);
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                        ],
-                        icon: const Icon(Icons.more_vert, color: Color(0xFF718096)),
-                        tooltip: 'Trip actions',
-                      ),
                     ],
                   ),
                 ],
