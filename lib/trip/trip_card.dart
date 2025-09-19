@@ -40,83 +40,94 @@ class TripCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Trip Header
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      _getCountryFlag(trip.country),
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          trip.country,
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF2D3748),
-                          ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF667eea).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        Text(
-                          trip.destination,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF718096),
-                          ),
+                        child: Text(
+                          _getCountryFlag(trip.country),
+                          style: const TextStyle(fontSize: 24),
                         ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isUpcoming
-                          ? const Color(0xFF48BB78).withOpacity(0.1)
-                          : isPast
-                          ? const Color(0xFF718096).withOpacity(0.1)
-                          : const Color(0xFF4299E1).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isUpcoming
-                          ? "${trip.daysLeft} days left"
-                          : isPast
-                          ? "Finished"
-                          : "Active",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isUpcoming
-                            ? const Color(0xFF48BB78)
-                            : isPast
-                            ? const Color(0xFF718096)
-                            : const Color(0xFF4299E1),
                       ),
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        _editTrip(context);
-                      } else if (value == 'delete') {
-                        _deleteTrip(context);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              trip.country,
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF2D3748),
+                              ),
+                            ),
+                            Text(
+                              trip.destination,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: const Color(0xFF718096),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                    icon: const Icon(Icons.more_vert, color: Color(0xFF718096)),
-                    tooltip: 'Trip actions',
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isUpcoming
+                              ? const Color(0xFF48BB78).withOpacity(0.1)
+                              : isPast
+                              ? const Color(0xFF718096).withOpacity(0.1)
+                              : const Color(0xFF4299E1).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isUpcoming
+                              ? "${trip.daysLeft} days left"
+                              : isPast
+                              ? "Finished"
+                              : "Active",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isUpcoming
+                                ? const Color(0xFF48BB78)
+                                : isPast
+                                ? const Color(0xFF718096)
+                                : const Color(0xFF4299E1),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _editTrip(context);
+                          } else if (value == 'delete') {
+                            _deleteTrip(context);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        ],
+                        icon: const Icon(Icons.more_vert, color: Color(0xFF718096)),
+                        tooltip: 'Trip actions',
+                      ),
+                    ],
                   ),
                 ],
               ),
