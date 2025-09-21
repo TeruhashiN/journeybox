@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../database/db_helper.dart';
+import '../trip_files/itinerary_model.dart';
+import '../trip_files/add_itinerary_screen.dart';
 import 'trip_model.dart';
 
 // Trip details screen with tabs for each feature
@@ -16,6 +19,9 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 0;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Itinerary> _itineraries = [];
+  bool _isLoading = true;
 
   final List<String> _tabNames = [
     "Itinerary",
@@ -55,6 +61,33 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         });
       }
     });
+    
+    // Load itineraries from database
+    _loadItineraries();
+  }
+  
+  // Load itineraries for this trip
+  Future<void> _loadItineraries() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final itineraries = await _dbHelper.getItinerariesForTrip(widget.trip.id);
+      if (mounted) {
+        setState(() {
+          _itineraries = itineraries;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading itineraries: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -195,7 +228,13 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
+        onPressed: () {
+          if (_currentIndex == 0) {
+            _navigateToAddItineraryScreen();
+          } else {
+            _showAddDialog(context);
+          }
+        },
         backgroundColor: _tabColors[_currentIndex],
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
@@ -214,34 +253,28 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     );
   }
 
+  Future<void> _navigateToAddItineraryScreen() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddItineraryScreen(trip: widget.trip),
+      ),
+    );
+    
+    // Refresh itineraries if a new one was added
+    if (result == true) {
+      _loadItineraries();
+    }
+  }
+
   Widget _buildItineraryTab() {
-    // Sample itinerary items based on trip destination
-    final sampleItinerary = [
-      {
-        'day': 'Day 1',
-        'time': '9:00 AM - 12:00 PM',
-        'activity': 'Arrival & City Tour',
-        'location': 'Airport to City Center',
-        'icon': Icons.flight_land_outlined,
-        'description': 'Arrive at the airport and take a guided tour of the historic city center.',
-      },
-      {
-        'day': 'Day 2',
-        'time': '10:00 AM - 4:00 PM',
-        'activity': 'Museum Visit',
-        'location': 'National Museum',
-        'icon': Icons.museum_outlined,
-        'description': 'Explore the rich history and culture at the National Museum. Entry fee included.',
-      },
-      {
-        'day': 'Day 3',
-        'time': '8:00 AM - 6:00 PM',
-        'activity': 'Beach Day',
-        'location': 'Sunny Beach',
-        'icon': Icons.beach_access_outlined,
-        'description': 'Relax at the beautiful beach with water sports and local cuisine.',
-      },
-    ];
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF667eea),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,11 +301,13 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: sampleItinerary.length,
-            itemBuilder: (context, index) {
-              final item = sampleItinerary[index];
+          child: _itineraries.isEmpty
+              ? _buildEmptyItineraryState()
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _itineraries.length,
+                  itemBuilder: (context, index) {
+                    final itinerary = _itineraries[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
                 elevation: 2,
@@ -293,7 +328,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              item['icon'] as IconData,
+                              itinerary.icon,
                               color: const Color(0xFF667eea),
                               size: 20,
                             ),
@@ -304,7 +339,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  item['activity'] as String,
+                                  itinerary.activity,
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -313,7 +348,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  item['location'] as String,
+                                  itinerary.location,
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     color: const Color(0xFF718096),
@@ -329,7 +364,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              item['day'] as String,
+                              itinerary.day,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: const Color(0xFF718096),
@@ -341,7 +376,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        item['time'] as String,
+                        itinerary.time,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF48BB78),
@@ -350,7 +385,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        item['description'] as String,
+                        itinerary.description,
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           color: const Color(0xFF4A5568),
@@ -365,6 +400,58 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           ),
         ),
       ],
+    );
+  }
+  
+  Widget _buildEmptyItineraryState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF667eea).withOpacity(0.1),
+              ),
+            ),
+            child: const Icon(
+              Icons.map_outlined,
+              size: 56,
+              color: Color(0xFF667eea),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Itinerary',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D3748),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No itinerary items added yet',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: const Color(0xFF718096),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Tap the + button to add your first itinerary item",
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: const Color(0xFF718096),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
