@@ -58,6 +58,20 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
     super.dispose();
   }
 
+  // Format day value
+  String _formatDayValue(String value) {
+    // If input is just a number, format as "Day X"
+    if (RegExp(r'^[0-9]+$').hasMatch(value)) {
+      return 'Day $value';
+    }
+    // If input doesn't start with "Day ", add it
+    if (!value.toLowerCase().trimLeft().startsWith('day ')) {
+      return 'Day $value';
+    }
+    // Otherwise return as is
+    return value;
+  }
+
   // Submit form and save to database
   Future<void> _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -68,7 +82,7 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
       Itinerary newItinerary = Itinerary(
         id: itineraryId,
         tripId: widget.trip.id,
-        day: _dayController.text,
+        day: _formatDayValue(_dayController.text),
         time: _formatTimeValue(),
         activity: _activityController.text,
         location: _locationController.text,
@@ -270,12 +284,30 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
                 // Day field
                 TextFormField(
                   controller: _dayController,
-                  decoration: _buildInputDecoration('Day (e.g., Day 1)', Icons.calendar_today_outlined),
+                  decoration: _buildInputDecoration(
+                    'Day (e.g., 1 or Day 1)',
+                    Icons.calendar_today_outlined,
+                    suffixIcon: const Tooltip(
+                      message: 'Enter just a number or "Day X"',
+                      child: Icon(
+                        Icons.info_outline,
+                        color: Color(0xFF48BB78),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  keyboardType: TextInputType.text,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter the day';
                     }
                     return null;
+                  },
+                  onChanged: (value) {
+                    // If user enters just a number, show hint that it will be formatted
+                    if (RegExp(r'^[0-9]+$').hasMatch(value)) {
+                      // Optional: could show a hint that this will appear as "Day X"
+                    }
                   },
                 ),
                 
