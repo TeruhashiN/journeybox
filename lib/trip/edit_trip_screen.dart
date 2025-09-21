@@ -570,9 +570,6 @@ class _EditTripScreenState extends State<EditTripScreen> {
     // Simulate API call
     await Future.delayed(const Duration(seconds: 1));
 
-    // Calculate days left
-    final int daysLeft = _startDate!.difference(DateTime.now()).inDays;
-
     // Format dates
     final String formattedDates = _formatDateRange(_startDate!, _endDate!);
 
@@ -580,18 +577,21 @@ class _EditTripScreenState extends State<EditTripScreen> {
     final String startIso = "${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}";
     final String endIso = "${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}";
 
-    // Update existing trip
+    // Create trip with temporary values for daysLeft and isActive
     final updatedTrip = Trip(
       id: widget.trip.id,
       country: _selectedCountry!,
       destination: _destinationController.text,
       dates: formattedDates,
       imageUrl: widget.trip.imageUrl, // Keep existing or update if added
-      daysLeft: daysLeft,
-      isActive: daysLeft >= 0,
+      daysLeft: 0, // Temporary value
+      isActive: false, // Temporary value
       startDate: startIso,
       endDate: endIso,
     );
+    
+    // Use the Trip model's method to calculate proper daysLeft and isActive values
+    updatedTrip.updateDynamicFields();
 
     final dbHelper = DatabaseHelper();
 
