@@ -20,10 +20,14 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
   
   // Form controllers
   final TextEditingController _dayController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
+  final TextEditingController _startTimeController = TextEditingController();
+  final TextEditingController _endTimeController = TextEditingController();
   final TextEditingController _activityController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  
+  // Time selection mode
+  bool _isTimeRangeMode = false;
   
   // Selected icon
   IconData _selectedIcon = Icons.map_outlined;
@@ -46,7 +50,8 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
   @override
   void dispose() {
     _dayController.dispose();
-    _timeController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
     _activityController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
@@ -64,7 +69,7 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
         id: itineraryId,
         tripId: widget.trip.id,
         day: _dayController.text,
-        time: _timeController.text,
+        time: _formatTimeValue(),
         activity: _activityController.text,
         location: _locationController.text,
         description: _descriptionController.text,
@@ -117,8 +122,21 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
     }
   }
 
-  // Show time picker
-  Future<void> _selectTime() async {
+  // Format time value based on mode
+  String _formatTimeValue() {
+    if (_isTimeRangeMode) {
+      if (_startTimeController.text.isNotEmpty && _endTimeController.text.isNotEmpty) {
+        return '${_startTimeController.text} - ${_endTimeController.text}';
+      } else {
+        return _startTimeController.text;
+      }
+    } else {
+      return _startTimeController.text;
+    }
+  }
+
+  // Show start time picker
+  Future<void> _selectStartTime() async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -139,7 +157,34 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
       // Convert to string format
       final String formattedTime = '${pickedTime.format(context)}';
       setState(() {
-        _timeController.text = formattedTime;
+        _startTimeController.text = formattedTime;
+      });
+    }
+  }
+  
+  // Show end time picker
+  Future<void> _selectEndTime() async {
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF667eea),
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (pickedTime != null) {
+      // Convert to string format
+      final String formattedTime = '${pickedTime.format(context)}';
+      setState(() {
+        _endTimeController.text = formattedTime;
       });
     }
   }
@@ -236,28 +281,124 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Time field with picker
-                GestureDetector(
-                  onTap: _selectTime,
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      controller: _timeController,
-                      decoration: _buildInputDecoration(
-                        'Time (e.g., 9:00 AM - 12:00 PM)',
-                        Icons.access_time_outlined,
-                        suffixIcon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: Color(0xFF48BB78),
-                        ),
+                // Time selection mode toggle
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Time Input Mode:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter the time';
-                        }
-                        return null;
-                      },
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text(
+                            'Single Time',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: !_isTimeRangeMode ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: !_isTimeRangeMode,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _isTimeRangeMode = false;
+                              });
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text(
+                            'Time Range',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: _isTimeRangeMode ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: _isTimeRangeMode,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _isTimeRangeMode = true;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Time picker section with responsive layout
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Column(
+                      children: [
+                        // Start time field
+                        InkWell(
+                          onTap: _selectStartTime,
+                          borderRadius: BorderRadius.circular(10),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              controller: _startTimeController,
+                              decoration: _buildInputDecoration(
+                                _isTimeRangeMode ? 'Start Time' : 'Time',
+                                Icons.access_time_outlined,
+                                suffixIcon: Icon(
+                                  Icons.access_time,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return _isTimeRangeMode ? 'Please enter start time' : 'Please enter time';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ),
+                        
+                        // End time field (only visible in range mode)
+                        if (_isTimeRangeMode) ...[
+                          const SizedBox(height: 16),
+                          InkWell(
+                            onTap: _selectEndTime,
+                            borderRadius: BorderRadius.circular(10),
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                controller: _endTimeController,
+                                decoration: _buildInputDecoration(
+                                  'End Time',
+                                  Icons.access_time_outlined,
+                                  suffixIcon: Icon(
+                                    Icons.access_time,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter end time';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
                 
                 const SizedBox(height: 24),
