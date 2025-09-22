@@ -4,6 +4,7 @@ import '../database/db_helper.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
 import '../trip_files_itinerary/add_itinerary_screen.dart';
 import '../trip_files_itinerary/edit_itinerary_screen.dart';
+import '../trip_files_itinerary/expandable_text.dart';
 import 'trip_model.dart';
 
 // Trip details screen with tabs for each feature
@@ -436,6 +437,20 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     );
   }
 
+  // Helper to build expandable description text
+  Widget _buildExpandableDescription(String description) {
+    // Use our reusable ExpandableText widget
+    return ExpandableText(
+      text: description,
+      style: GoogleFonts.poppins(
+        fontSize: 14,
+        color: const Color(0xFF4A5568),
+        height: 1.4,
+      ),
+      maxLines: 3,
+    );
+  }
+
   Widget _buildItineraryTab() {
     if (_isLoading) {
       return const Center(
@@ -544,89 +559,82 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      // Row with time and options menu button
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            itinerary.time,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: const Color(0xFF48BB78),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          // Options menu button
-                          PopupMenuButton<String>(
-                            icon: const Icon(
-                              Icons.more_horiz,
-                              color: Color(0xFF718096),
-                              size: 20,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.zero,
-                            elevation: 4,
-                            onSelected: (value) {
-                              if (value == 'edit') {
-                                _navigateToEditItineraryScreen(itinerary);
-                              } else if (value == 'delete') {
-                                _showDeleteConfirmationDialog(itinerary);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem<String>(
-                                value: 'edit',
-                                child: ListTile(
-                                  leading: const Icon(
-                                    Icons.edit_outlined,
-                                    color: Color(0xFF667eea),
-                                    size: 20,
-                                  ),
-                                  title: Text(
-                                    'Edit',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: const Color(0xFF2D3748),
-                                    ),
-                                  ),
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'delete',
-                                child: ListTile(
-                                  leading: const Icon(
-                                    Icons.delete_outline,
-                                    color: Color(0xFFE53E3E),
-                                    size: 20,
-                                  ),
-                                  title: Text(
-                                    'Delete',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: const Color(0xFF2D3748),
-                                    ),
-                                  ),
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
-                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      // Time info
+                      Text(
+                        itinerary.time,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF48BB78),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        itinerary.description,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: const Color(0xFF4A5568),
-                          height: 1.4,
+                      // Expandable description
+                      _buildExpandableDescription(itinerary.description),
+                      // Single settings menu button at bottom
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: PopupMenuButton<String>(
+                          icon: const Icon(
+                            Icons.settings,
+                            color: Color(0xFF718096),
+                            size: 18,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.zero,
+                          elevation: 4,
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _navigateToEditItineraryScreen(itinerary);
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmationDialog(itinerary);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem<String>(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.edit_outlined,
+                                  color: Color(0xFF667eea),
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  'Edit',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: const Color(0xFF2D3748),
+                                  ),
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                              ),
+                            ),
+                            PopupMenuItem<String>(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.delete_outline,
+                                  color: Color(0xFFE53E3E),
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  'Delete',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: const Color(0xFF2D3748),
+                                  ),
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -859,7 +867,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
       ),
     );
   }
-
+  
   String _getAddDescription(String section) {
     switch (section) {
       case "Itinerary":
