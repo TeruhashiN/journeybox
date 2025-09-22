@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../database/db_helper.dart';
-import '../trip_files/itinerary_model.dart';
-import '../trip_files/add_itinerary_screen.dart';
+import '../trip_files_itinerary/itinerary_model.dart';
+import '../trip_files_itinerary/add_itinerary_screen.dart';
+import '../trip_files_itinerary/edit_itinerary_screen.dart';
 import 'trip_model.dart';
 
 // Trip details screen with tabs for each feature
@@ -266,6 +267,174 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
       _loadItineraries();
     }
   }
+  
+  // Navigate to edit itinerary screen
+  Future<void> _navigateToEditItineraryScreen(Itinerary itinerary) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditItineraryScreen(
+          trip: widget.trip,
+          itinerary: itinerary,
+        ),
+      ),
+    );
+    
+    // Refresh itineraries if an item was edited
+    if (result == true) {
+      _loadItineraries();
+    }
+  }
+  
+  // Show delete confirmation dialog
+  void _showDeleteConfirmationDialog(Itinerary itinerary) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Delete Itinerary',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF2D3748),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this itinerary item?',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: const Color(0xFF4A5568),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    itinerary.icon,
+                    size: 20,
+                    color: const Color(0xFF667eea),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          itinerary.activity,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF2D3748),
+                          ),
+                        ),
+                        Text(
+                          '${itinerary.day}, ${itinerary.time}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF718096),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF718096),
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Delete the itinerary item
+              try {
+                await _dbHelper.deleteItinerary(itinerary.id);
+                
+                if (mounted) {
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Itinerary deleted successfully',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  
+                  // Close dialog and refresh
+                  Navigator.pop(context);
+                  _loadItineraries();
+                }
+              } catch (e) {
+                // Show error message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error deleting itinerary: ${e.toString()}',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
+              }
+            },
+            icon: const Icon(Icons.delete, size: 18),
+            label: Text(
+              'Delete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildItineraryTab() {
     if (_isLoading) {
@@ -375,13 +544,81 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        itinerary.time,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF48BB78),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      // Row with time and options menu button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            itinerary.time,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF48BB78),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          // Options menu button
+                          PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.more_horiz,
+                              color: Color(0xFF718096),
+                              size: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                            elevation: 4,
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _navigateToEditItineraryScreen(itinerary);
+                              } else if (value == 'delete') {
+                                _showDeleteConfirmationDialog(itinerary);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Color(0xFF667eea),
+                                    size: 20,
+                                  ),
+                                  title: Text(
+                                    'Edit',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: const Color(0xFF2D3748),
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'delete',
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.delete_outline,
+                                    color: Color(0xFFE53E3E),
+                                    size: 20,
+                                  ),
+                                  title: Text(
+                                    'Delete',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: const Color(0xFF2D3748),
+                                    ),
+                                  ),
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
