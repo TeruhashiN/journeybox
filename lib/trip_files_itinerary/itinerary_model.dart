@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+enum FileType {
+  none,
+  image,
+  pdf,
+  docx
+}
+
 class Itinerary {
   final String id;
   final String tripId;
@@ -9,6 +16,9 @@ class Itinerary {
   final String location;
   final String description;
   final IconData icon;
+  final FileType fileType;
+  final String? filePath;
+  final String? fileName;
 
   Itinerary({
     required this.id,
@@ -19,6 +29,9 @@ class Itinerary {
     required this.location,
     required this.description,
     required this.icon,
+    this.fileType = FileType.none,
+    this.filePath,
+    this.fileName,
   });
 
   // Convert IconData to string for database storage
@@ -41,6 +54,9 @@ class Itinerary {
       'location': location,
       'description': description,
       'icon': _iconToString(),
+      'file_type': fileType.index,
+      'file_path': filePath,
+      'file_name': fileName,
     };
   }
 
@@ -54,6 +70,9 @@ class Itinerary {
       location: map['location'],
       description: map['description'],
       icon: _stringToIcon(map['icon']),
+      fileType: FileType.values[map['file_type'] ?? 0],
+      filePath: map['file_path'],
+      fileName: map['file_name'],
     );
   }
 
@@ -67,6 +86,9 @@ class Itinerary {
     String? location,
     String? description,
     IconData? icon,
+    FileType? fileType,
+    String? filePath,
+    String? fileName,
   }) {
     return Itinerary(
       id: id ?? this.id,
@@ -77,6 +99,26 @@ class Itinerary {
       location: location ?? this.location,
       description: description ?? this.description,
       icon: icon ?? this.icon,
+      fileType: fileType ?? this.fileType,
+      filePath: filePath ?? this.filePath,
+      fileName: fileName ?? this.fileName,
     );
+  }
+  
+  // Helper method to check if this itinerary has an attachment
+  bool get hasAttachment => fileType != FileType.none && filePath != null;
+  
+  // Helper method to get the file extension based on file type
+  String? get fileExtension {
+    switch (fileType) {
+      case FileType.image:
+        return 'jpg'; // Could be different based on actual image type
+      case FileType.pdf:
+        return 'pdf';
+      case FileType.docx:
+        return 'docx';
+      default:
+        return null;
+    }
   }
 }

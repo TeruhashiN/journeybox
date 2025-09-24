@@ -24,7 +24,7 @@ class DatabaseHelper {
     print('Database path: $path');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4, // Increment version for file attachment support
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -47,7 +47,7 @@ class DatabaseHelper {
     ''');
     print('Trip table created successfully');
     
-    // Create the itineraries table
+    // Create the itineraries table with file attachment support
     await db.execute('''
       CREATE TABLE itineraries(
         id TEXT PRIMARY KEY,
@@ -58,6 +58,9 @@ class DatabaseHelper {
         location TEXT NOT NULL,
         description TEXT NOT NULL,
         icon TEXT NOT NULL,
+        file_type INTEGER DEFAULT 0,
+        file_path TEXT,
+        file_name TEXT,
         FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
       )
     ''');
@@ -83,10 +86,26 @@ class DatabaseHelper {
         location TEXT NOT NULL,
         description TEXT NOT NULL,
         icon TEXT NOT NULL,
+        file_type INTEGER DEFAULT 0,
+        file_path TEXT,
+        file_name TEXT,
         FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
       )
     ''');
       print('Migration to version 3 completed: added itineraries table');
+    }
+    
+    if (oldVersion < 4) {
+      // Add file attachment columns to itineraries table
+      try {
+        await db.execute('ALTER TABLE itineraries ADD COLUMN file_type INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE itineraries ADD COLUMN file_path TEXT');
+        await db.execute('ALTER TABLE itineraries ADD COLUMN file_name TEXT');
+        print('Migration to version 4 completed: added file attachment columns');
+      } catch (e) {
+        print('Error during migration to version 4: $e');
+        // Handle migration errors
+      }
     }
   }
 

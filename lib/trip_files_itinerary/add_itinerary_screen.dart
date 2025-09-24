@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
+import 'package:file_picker/file_picker.dart' as picker;
+import 'package:path/path.dart' as path;
 import '../database/db_helper.dart';
 import '../trip/trip_model.dart';
-import 'itinerary_model.dart';
+import 'itinerary_model.dart' as itinerary_model;
 
 class AddItineraryScreen extends StatefulWidget {
   final Trip trip;
@@ -32,6 +35,15 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
   // Selected icon
   IconData _selectedIcon = Icons.map_outlined;
   
+  // File attachment
+  File? _selectedFile;
+  String? _fileName;
+  itinerary_model.FileType _selectedFileType = itinerary_model.FileType.none;
+  
+  // Aliases for file picker types
+  static const _typeImage = picker.FileType.image;
+  static const _typeCustom = picker.FileType.custom;
+
   // Available icons for selection
   final List<MapEntry<String, IconData>> _availableIcons = [
     MapEntry('Map', Icons.map_outlined),
@@ -79,7 +91,7 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
       String itineraryId = const Uuid().v4();
       
       // Create a new itinerary object
-      Itinerary newItinerary = Itinerary(
+      itinerary_model.Itinerary newItinerary = itinerary_model.Itinerary(
         id: itineraryId,
         tripId: widget.trip.id,
         day: _formatDayValue(_dayController.text),
@@ -88,6 +100,9 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
         location: _locationController.text,
         description: _descriptionController.text,
         icon: _selectedIcon,
+        fileType: _selectedFileType,
+        filePath: _selectedFile?.path,
+        fileName: _fileName,
       );
       
       try {
@@ -481,6 +496,175 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
                 
                 const SizedBox(height: 24),
                 
+                // File attachment section
+                _buildSectionTitle('Attach File (Optional)'),
+                const SizedBox(height: 16),
+                
+                // File type selection
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'File Type:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text(
+                            'None',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: _selectedFileType == itinerary_model.FileType.none ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: _selectedFileType == itinerary_model.FileType.none,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedFileType = itinerary_model.FileType.none;
+                                _selectedFile = null;
+                                _fileName = null;
+                              });
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text(
+                            'Image',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: _selectedFileType == itinerary_model.FileType.image ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: _selectedFileType == itinerary_model.FileType.image,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedFileType = itinerary_model.FileType.image;
+                              });
+                              _pickFile(_typeImage);
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text(
+                            'PDF',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: _selectedFileType == itinerary_model.FileType.pdf ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: _selectedFileType == itinerary_model.FileType.pdf,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedFileType = itinerary_model.FileType.pdf;
+                              });
+                              _pickFile(_typeCustom, ['pdf']);
+                            }
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text(
+                            'DOCX',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: _selectedFileType == itinerary_model.FileType.docx ? Colors.white : const Color(0xFF718096),
+                            ),
+                          ),
+                          selected: _selectedFileType == itinerary_model.FileType.docx,
+                          selectedColor: const Color(0xFF48BB78),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedFileType = itinerary_model.FileType.docx;
+                              });
+                              _pickFile(_typeCustom, ['docx']);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                
+                // Display selected file info
+                if (_selectedFile != null && _fileName != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF48BB78).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF48BB78).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            _getFileTypeIcon(),
+                            color: const Color(0xFF48BB78),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _fileName!,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${(_selectedFile!.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          color: Colors.grey.shade600,
+                          onPressed: () {
+                            setState(() {
+                              _selectedFile = null;
+                              _fileName = null;
+                              _selectedFileType = itinerary_model.FileType.none;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                const SizedBox(height: 24),
+                
                 _buildSectionTitle('Choose Icon'),
                 const SizedBox(height: 16),
                 
@@ -618,5 +802,101 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
         horizontal: 16,
       ),
     );
+  }
+  
+  // Helper method to pick a file
+  Future<void> _pickFile(picker.FileType type, [List<String>? allowedExtensions]) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Opening file picker...',
+            style: GoogleFonts.poppins(),
+          ),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+      picker.FilePickerResult? result = await picker.FilePicker.platform.pickFiles(
+        type: type,
+        allowedExtensions: allowedExtensions,
+        allowMultiple: false,
+      );
+      
+      if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
+        setState(() {
+          _selectedFile = File(result.files.single.path!);
+          _fileName = path.basename(_selectedFile!.path);
+          
+          // Update the file type based on extension
+          if (_fileName!.endsWith('.jpg') ||
+              _fileName!.endsWith('.jpeg') ||
+              _fileName!.endsWith('.png') ||
+              _fileName!.endsWith('.gif')) {
+            _selectedFileType = itinerary_model.FileType.image;
+          } else if (_fileName!.endsWith('.pdf')) {
+            _selectedFileType = itinerary_model.FileType.pdf;
+          } else if (_fileName!.endsWith('.docx')) {
+            _selectedFileType = itinerary_model.FileType.docx;
+          }
+        });
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'File selected: $_fileName',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        // User canceled the picker
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No file selected',
+              style: GoogleFonts.poppins(),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error picking file: $e');
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error selecting file: $e',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+  
+  // Helper method to get icon based on file type
+  IconData _getFileTypeIcon() {
+    if (_fileName == null) return Icons.insert_drive_file_outlined;
+    
+    if (_fileName!.endsWith('.jpg') || 
+        _fileName!.endsWith('.jpeg') || 
+        _fileName!.endsWith('.png') ||
+        _fileName!.endsWith('.gif')) {
+      return Icons.image_outlined;
+    } else if (_fileName!.endsWith('.pdf')) {
+      return Icons.picture_as_pdf_outlined;
+    } else if (_fileName!.endsWith('.doc') || _fileName!.endsWith('.docx')) {
+      return Icons.description_outlined;
+    } else {
+      return Icons.insert_drive_file_outlined;
+    }
   }
 }

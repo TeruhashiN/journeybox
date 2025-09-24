@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../database/db_helper.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
 import '../trip_files_itinerary/add_itinerary_screen.dart';
@@ -571,6 +573,66 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                       const SizedBox(height: 8),
                       // Expandable description
                       _buildExpandableDescription(itinerary.description),
+
+                      // File attachment display (if any)
+                      if (itinerary.hasAttachment && itinerary.filePath != null) ...[
+                        const SizedBox(height: 16),
+                        InkWell(
+                          onTap: () => _openAttachment(itinerary),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF667eea).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: _getFileTypeIcon(itinerary),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        itinerary.fileName ?? 'Attachment',
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        _getAttachmentTypeText(itinerary.fileType),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.open_in_new,
+                                  size: 20,
+                                  color: Color(0xFF667eea),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      
                       // Single settings menu button at bottom
                       const SizedBox(height: 12),
                       Align(
@@ -916,5 +978,111 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // Helper method to get icon based on file type
+  Widget _getFileTypeIcon(Itinerary itinerary) {
+    if (itinerary.fileName == null) {
+      return const Icon(
+        Icons.insert_drive_file_outlined,
+        color: Color(0xFF667eea),
+        size: 24,
+      );
+    }
+    
+    IconData iconData;
+    
+    switch (itinerary.fileType) {
+      case FileType.image:
+        iconData = Icons.image_outlined;
+        break;
+      case FileType.pdf:
+        iconData = Icons.picture_as_pdf_outlined;
+        break;
+      case FileType.docx:
+        iconData = Icons.description_outlined;
+        break;
+      default:
+        iconData = Icons.insert_drive_file_outlined;
+    }
+    
+    return Icon(
+      iconData,
+      color: const Color(0xFF667eea),
+      size: 24,
+    );
+  }
+  
+  // Helper method to get text description for file type
+  String _getAttachmentTypeText(FileType fileType) {
+    switch (fileType) {
+      case FileType.image:
+        return 'Image';
+      case FileType.pdf:
+        return 'PDF Document';
+      case FileType.docx:
+        return 'Word Document';
+      default:
+        return 'File Attachment';
+    }
+  }
+  
+  // Open the attachment
+  void _openAttachment(Itinerary itinerary) async {
+    if (itinerary.filePath == null) return;
+    
+    try {
+      final file = File(itinerary.filePath!);
+      if (await file.exists()) {
+        // Show loading indicator
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Opening file...',
+              style: GoogleFonts.poppins(),
+            ),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        
+        // Launch file using URL launcher
+        final Uri fileUri = Uri.file(file.path);
+        try {
+          await launchUrl(fileUri);
+        } catch (e) {
+          throw Exception('Could not launch file: $e');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File not found: ${itinerary.filePath}',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error opening file: $e',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 }
