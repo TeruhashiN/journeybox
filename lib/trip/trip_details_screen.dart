@@ -6,7 +6,7 @@ import '../database/db_helper.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
 import '../trip_files_itinerary/add_itinerary_screen.dart';
 import '../trip_files_itinerary/edit_itinerary_screen.dart';
-import '../trip_files_itinerary/expandable_text.dart';
+import '../text/expandable_text.dart';
 import 'trip_model.dart';
 
 // Trip details screen with tabs for each feature

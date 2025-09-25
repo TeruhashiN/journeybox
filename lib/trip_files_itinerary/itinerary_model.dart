@@ -7,6 +7,35 @@ enum FileType {
   docx
 }
 
+// Class to represent a single file attachment
+class FileAttachment {
+  final FileType fileType;
+  final String filePath;
+  final String fileName;
+  
+  FileAttachment({
+    required this.fileType,
+    required this.filePath,
+    required this.fileName,
+  });
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'file_type': fileType.index,
+      'file_path': filePath,
+      'file_name': fileName,
+    };
+  }
+  
+  factory FileAttachment.fromMap(Map<String, dynamic> map) {
+    return FileAttachment(
+      fileType: FileType.values[map['file_type']],
+      filePath: map['file_path'],
+      fileName: map['file_name'],
+    );
+  }
+}
+
 class Itinerary {
   final String id;
   final String tripId;
@@ -16,9 +45,12 @@ class Itinerary {
   final String location;
   final String description;
   final IconData icon;
-  final FileType fileType;
-  final String? filePath;
-  final String? fileName;
+  final List<FileAttachment> attachments;
+  
+  // Legacy fields for backward compatibility
+  FileType get fileType => attachments.isNotEmpty ? attachments.first.fileType : FileType.none;
+  String? get filePath => attachments.isNotEmpty ? attachments.first.filePath : null;
+  String? get fileName => attachments.isNotEmpty ? attachments.first.fileName : null;
 
   Itinerary({
     required this.id,
@@ -29,10 +61,38 @@ class Itinerary {
     required this.location,
     required this.description,
     required this.icon,
-    this.fileType = FileType.none,
-    this.filePath,
-    this.fileName,
-  });
+    List<FileAttachment>? attachments,
+    // Legacy parameters for backward compatibility
+    FileType fileType = FileType.none,
+    String? filePath,
+    String? fileName,
+  }) : this.attachments = _initializeAttachments(
+         attachments,
+         fileType,
+         filePath,
+         fileName
+       );
+  
+  // Helper method to initialize attachments properly
+  static List<FileAttachment> _initializeAttachments(
+    List<FileAttachment>? attachments,
+    FileType fileType,
+    String? filePath,
+    String? fileName
+  ) {
+    // If attachments are provided, use them
+    if (attachments != null && attachments.isNotEmpty) {
+      return attachments;
+    }
+    
+    // Otherwise, if we have legacy file info, create a single attachment
+    if (filePath != null && fileName != null && fileType != FileType.none) {
+      return [FileAttachment(fileType: fileType, filePath: filePath, fileName: fileName)];
+    }
+    
+    // Default to empty list
+    return [];
+  }
 
   // Convert IconData to string for database storage
   String _iconToString() {
@@ -45,7 +105,7 @@ class Itinerary {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final Map<String, dynamic> map = {
       'id': id,
       'trip_id': tripId,
       'day': day,
@@ -54,13 +114,35 @@ class Itinerary {
       'location': location,
       'description': description,
       'icon': _iconToString(),
-      'file_type': fileType.index,
-      'file_path': filePath,
-      'file_name': fileName,
+      'attachments': attachments.map((attachment) => attachment.toMap()).toList(),
+      
+      // Include legacy fields for backward compatibility
+      'file_type': attachments.isNotEmpty ? attachments.first.fileType.index : 0,
+      'file_path': attachments.isNotEmpty ? attachments.first.filePath : null,
+      'file_name': attachments.isNotEmpty ? attachments.first.fileName : null,
     };
+    return map;
   }
 
   factory Itinerary.fromMap(Map<String, dynamic> map) {
+    // Handle both new and legacy formats
+    List<FileAttachment> attachmentsList = [];
+    
+    if (map.containsKey('attachments') && map['attachments'] is List) {
+      attachmentsList = (map['attachments'] as List)
+          .map((attachment) => FileAttachment.fromMap(attachment))
+          .toList();
+    } else if (map['file_path'] != null && map['file_name'] != null) {
+      // Legacy format - create a single attachment
+      attachmentsList = [
+        FileAttachment(
+          fileType: FileType.values[map['file_type'] ?? 0],
+          filePath: map['file_path'],
+          fileName: map['file_name'],
+        )
+      ];
+    }
+    
     return Itinerary(
       id: map['id'],
       tripId: map['trip_id'],
@@ -70,9 +152,7 @@ class Itinerary {
       location: map['location'],
       description: map['description'],
       icon: _stringToIcon(map['icon']),
-      fileType: FileType.values[map['file_type'] ?? 0],
-      filePath: map['file_path'],
-      fileName: map['file_name'],
+      attachments: attachmentsList,
     );
   }
 
@@ -86,9 +166,7 @@ class Itinerary {
     String? location,
     String? description,
     IconData? icon,
-    FileType? fileType,
-    String? filePath,
-    String? fileName,
+    List<FileAttachment>? attachments,
   }) {
     return Itinerary(
       id: id ?? this.id,
@@ -99,17 +177,23 @@ class Itinerary {
       location: location ?? this.location,
       description: description ?? this.description,
       icon: icon ?? this.icon,
-      fileType: fileType ?? this.fileType,
-      filePath: filePath ?? this.filePath,
-      fileName: fileName ?? this.fileName,
+      attachments: attachments ?? this.attachments,
     );
   }
   
-  // Helper method to check if this itinerary has an attachment
-  bool get hasAttachment => fileType != FileType.none && filePath != null;
+  // Helper method to check if this itinerary has any attachments
+  bool get hasAttachments => attachments.isNotEmpty;
   
-  // Helper method to get the file extension based on file type
-  String? get fileExtension {
+  // Legacy method for backward compatibility
+  bool get hasAttachment => hasAttachments;
+  
+  // Helper method to get attachments by file type
+  List<FileAttachment> getAttachmentsByType(FileType type) {
+    return attachments.where((attachment) => attachment.fileType == type).toList();
+  }
+  
+  // Helper method to get the file extension for a specific file type
+  static String? getFileExtension(FileType fileType) {
     switch (fileType) {
       case FileType.image:
         return 'jpg'; // Could be different based on actual image type
@@ -121,4 +205,8 @@ class Itinerary {
         return null;
     }
   }
+  
+  // Legacy method for backward compatibility
+  String? get fileExtension => hasAttachments ?
+      getFileExtension(attachments.first.fileType) : null;
 }

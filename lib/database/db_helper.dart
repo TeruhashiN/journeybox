@@ -24,7 +24,7 @@ class DatabaseHelper {
     print('Database path: $path');
     return await openDatabase(
       path,
-      version: 4, // Increment version for file attachment support
+      version: 5, // Increment version for multiple file attachments support
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -65,6 +65,19 @@ class DatabaseHelper {
       )
     ''');
     print('Itineraries table created successfully');
+    
+    // Create a table for multiple file attachments
+    await db.execute('''
+      CREATE TABLE itinerary_attachments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itinerary_id TEXT NOT NULL,
+        file_type INTEGER NOT NULL,
+        file_path TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        FOREIGN KEY (itinerary_id) REFERENCES itineraries (id) ON DELETE CASCADE
+      )
+    ''');
+    print('Itinerary attachments table created successfully');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -106,6 +119,37 @@ class DatabaseHelper {
         print('Error during migration to version 4: $e');
         // Handle migration errors
       }
+    }
+    
+    if (oldVersion < 5) {
+      // Create a table for multiple file attachments
+      await db.execute('''
+        CREATE TABLE itinerary_attachments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          itinerary_id TEXT NOT NULL,
+          file_type INTEGER NOT NULL,
+          file_path TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          FOREIGN KEY (itinerary_id) REFERENCES itineraries (id) ON DELETE CASCADE
+        )
+      ''');
+      
+      // Migrate existing file attachments to the new table
+      List<Map<String, dynamic>> existingItineraries = await db.query(
+        'itineraries',
+        where: 'file_path IS NOT NULL AND file_name IS NOT NULL AND file_type > 0',
+      );
+      
+      for (var itinerary in existingItineraries) {
+        await db.insert('itinerary_attachments', {
+          'itinerary_id': itinerary['id'],
+          'file_type': itinerary['file_type'],
+          'file_path': itinerary['file_path'],
+          'file_name': itinerary['file_name'],
+        });
+      }
+      
+      print('Migration to version 5 completed: added support for multiple attachments');
     }
   }
 
@@ -180,9 +224,26 @@ class DatabaseHelper {
     try {
       Database db = await database;
       print('Inserting itinerary: ${itinerary.toMap()}');
-      int id = await db.insert('itineraries', itinerary.toMap());
-      print('Insert successful, new row ID: $id');
-      return id;
+      
+      // Start a transaction to ensure all operations complete together
+      await db.transaction((txn) async {
+        // Insert the itinerary first
+        await txn.insert('itineraries', itinerary.toMap());
+        
+        // Insert all attachments if there are any
+        if (itinerary.attachments.isNotEmpty) {
+          for (var attachment in itinerary.attachments) {
+            await txn.insert('itinerary_attachments', {
+              'itinerary_id': itinerary.id,
+              'file_type': attachment.fileType.index,
+              'file_path': attachment.filePath,
+              'file_name': attachment.fileName,
+            });
+          }
+        }
+      });
+      
+      return 1; // Return success
     } catch (e) {
       print('Insert itinerary failed: $e');
       rethrow;
@@ -192,17 +253,54 @@ class DatabaseHelper {
   Future<List<Itinerary>> getItinerariesForTrip(String tripId) async {
     try {
       Database db = await database;
-      List<Map<String, dynamic>> maps = await db.query(
+      
+      // Get all itineraries for this trip
+      List<Map<String, dynamic>> itineraryMaps = await db.query(
         'itineraries',
         where: 'trip_id = ?',
         whereArgs: [tripId],
         orderBy: 'day ASC',
       );
-      print('Queried ${maps.length} itineraries for trip $tripId');
+      print('Queried ${itineraryMaps.length} itineraries for trip $tripId');
       
-      return List.generate(maps.length, (i) {
-        return Itinerary.fromMap(maps[i]);
-      });
+      // Create list of itineraries with empty attachments
+      List<Itinerary> itineraries = itineraryMaps.map((map) => Itinerary.fromMap(map)).toList();
+      
+      // For each itinerary, load its attachments
+      for (var itinerary in itineraries) {
+        List<Map<String, dynamic>> attachmentMaps = await db.query(
+          'itinerary_attachments',
+          where: 'itinerary_id = ?',
+          whereArgs: [itinerary.id],
+        );
+        
+        // Convert the attachment maps to FileAttachment objects
+        if (attachmentMaps.isNotEmpty) {
+          List<FileAttachment> attachments = attachmentMaps.map((map) {
+            return FileAttachment(
+              fileType: FileType.values[map['file_type']],
+              filePath: map['file_path'],
+              fileName: map['file_name'],
+            );
+          }).toList();
+          
+          // Create a new itinerary with the attachments
+          int index = itineraries.indexOf(itinerary);
+          itineraries[index] = Itinerary(
+            id: itinerary.id,
+            tripId: itinerary.tripId,
+            day: itinerary.day,
+            time: itinerary.time,
+            activity: itinerary.activity,
+            location: itinerary.location,
+            description: itinerary.description,
+            icon: itinerary.icon,
+            attachments: attachments,
+          );
+        }
+      }
+      
+      return itineraries;
     } catch (e) {
       print('Load itineraries failed: $e');
       return [];
@@ -212,15 +310,52 @@ class DatabaseHelper {
   Future<int> updateItinerary(Itinerary itinerary) async {
     try {
       Database db = await database;
-      print('Updating itinerary: ${itinerary.toMap()}');
-      int rowsAffected = await db.update(
-        'itineraries',
-        itinerary.toMap(),
-        where: 'id = ?',
-        whereArgs: [itinerary.id],
-      );
-      print('Update successful, rows affected: $rowsAffected');
-      return rowsAffected;
+      print('Updating itinerary: ${itinerary.id}');
+      
+      // Start a transaction
+      await db.transaction((txn) async {
+        // Create a modified map for the itineraries table (without the attachments field)
+        final Map<String, dynamic> itineraryMap = {
+          'id': itinerary.id,
+          'trip_id': itinerary.tripId,
+          'day': itinerary.day,
+          'time': itinerary.time,
+          'activity': itinerary.activity,
+          'location': itinerary.location,
+          'description': itinerary.description,
+          'icon': itinerary.icon.codePoint.toString(),
+          'file_type': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.fileType.index : 0,
+          'file_path': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.filePath : null,
+          'file_name': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.fileName : null,
+        };
+        
+        // Update the itinerary
+        await txn.update(
+          'itineraries',
+          itineraryMap,
+          where: 'id = ?',
+          whereArgs: [itinerary.id],
+        );
+        
+        // Delete all existing attachments
+        await txn.delete(
+          'itinerary_attachments',
+          where: 'itinerary_id = ?',
+          whereArgs: [itinerary.id],
+        );
+        
+        // Insert new attachments
+        for (var attachment in itinerary.attachments) {
+          await txn.insert('itinerary_attachments', {
+            'itinerary_id': itinerary.id,
+            'file_type': attachment.fileType.index,
+            'file_path': attachment.filePath,
+            'file_name': attachment.fileName,
+          });
+        }
+      });
+      
+      return 1; // Return success
     } catch (e) {
       print('Update itinerary failed: $e');
       rethrow;
@@ -231,6 +366,8 @@ class DatabaseHelper {
     try {
       Database db = await database;
       print('Deleting itinerary with id: $id');
+      
+      // The ON DELETE CASCADE constraint will automatically delete related attachments
       int rowsAffected = await db.delete(
         'itineraries',
         where: 'id = ?',
@@ -259,6 +396,29 @@ class DatabaseHelper {
     } catch (e) {
       print('Delete itineraries failed: $e');
       rethrow;
+    }
+    
+    // Get all file attachments for a specific itinerary
+    Future<List<FileAttachment>> getAttachmentsForItinerary(String itineraryId) async {
+      try {
+        Database db = await database;
+        List<Map<String, dynamic>> maps = await db.query(
+          'itinerary_attachments',
+          where: 'itinerary_id = ?',
+          whereArgs: [itineraryId],
+        );
+        
+        return List.generate(maps.length, (i) {
+          return FileAttachment(
+            fileType: FileType.values[maps[i]['file_type']],
+            filePath: maps[i]['file_path'],
+            fileName: maps[i]['file_name'],
+          );
+        });
+      } catch (e) {
+        print('Load attachments failed: $e');
+        return [];
+      }
     }
   }
 }

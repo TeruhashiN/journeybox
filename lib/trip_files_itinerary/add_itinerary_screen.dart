@@ -35,10 +35,10 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
   // Selected icon
   IconData _selectedIcon = Icons.map_outlined;
   
-  // File attachment
-  File? _selectedFile;
-  String? _fileName;
-  itinerary_model.FileType _selectedFileType = itinerary_model.FileType.none;
+  // File attachments
+  final List<Map<String, dynamic>> _selectedFiles = [];
+  final Set<itinerary_model.FileType> _selectedFileTypes = {};
+  bool _isFileTypeSelectionMode = true;
   
   // Aliases for file picker types
   static const _typeImage = picker.FileType.image;
@@ -90,6 +90,15 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
       // Generate a unique ID for the itinerary
       String itineraryId = const Uuid().v4();
       
+      // Create file attachment objects
+      final attachments = _selectedFiles.map((fileData) {
+        return itinerary_model.FileAttachment(
+          fileType: fileData['fileType'],
+          filePath: fileData['file'].path,
+          fileName: fileData['fileName'],
+        );
+      }).toList();
+
       // Create a new itinerary object
       itinerary_model.Itinerary newItinerary = itinerary_model.Itinerary(
         id: itineraryId,
@@ -100,9 +109,7 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
         location: _locationController.text,
         description: _descriptionController.text,
         icon: _selectedIcon,
-        fileType: _selectedFileType,
-        filePath: _selectedFile?.path,
-        fileName: _fileName,
+        attachments: attachments,
       );
       
       try {
@@ -497,169 +504,267 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
                 const SizedBox(height: 24),
                 
                 // File attachment section
-                _buildSectionTitle('Attach File (Optional)'),
+                _buildSectionTitle('Attach Files (Optional)'),
                 const SizedBox(height: 16),
                 
                 // File type selection
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'File Type:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    // File type title and count
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      children: [
+                        Text(
+                          _isFileTypeSelectionMode
+                            ? 'Select File Type(s):'
+                            : 'Selected File Type(s):',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (_selectedFileTypes.isNotEmpty)
+                          Chip(
+                            label: Text(
+                              '${_selectedFileTypes.length}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF48BB78),
+                            padding: const EdgeInsets.all(0),
+                          ),
+                      ],
                     ),
+                    
                     const SizedBox(height: 8),
+                    
+                    // Action buttons
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        ChoiceChip(
-                          label: Text(
-                            'None',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: _selectedFileType == itinerary_model.FileType.none ? Colors.white : const Color(0xFF718096),
+                            if (_isFileTypeSelectionMode)
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.file_copy_outlined, size: 16),
+                                label: Text(
+                                  'Pick Files',
+                                  style: GoogleFonts.poppins(fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF48BB78),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8
+                                  ),
+                                ),
+                                onPressed: _selectedFileTypes.isEmpty
+                                  ? null
+                                  : _pickFilesBasedOnSelectedTypes,
+                              ),
+                            if (!_isFileTypeSelectionMode)
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.arrow_back_ios_new, size: 16),
+                                label: Text(
+                                  'Back to Types',
+                                  style: GoogleFonts.poppins(fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF48BB78),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isFileTypeSelectionMode = true;
+                                  });
+                                },
+                              ),
+                            if (_selectedFiles.isNotEmpty || _selectedFileTypes.isNotEmpty)
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.delete_outline, size: 16),
+                                label: Text(
+                                  'Clear All',
+                                  style: GoogleFonts.poppins(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedFiles.clear();
+                                    _selectedFileTypes.clear();
+                                    _isFileTypeSelectionMode = true;
+                                  });
+                                },
+                              ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_isFileTypeSelectionMode)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: Text(
+                              'Image',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: _selectedFileTypes.contains(itinerary_model.FileType.image) ? Colors.white : const Color(0xFF718096),
+                              ),
                             ),
-                          ),
-                          selected: _selectedFileType == itinerary_model.FileType.none,
-                          selectedColor: const Color(0xFF48BB78),
-                          onSelected: (selected) {
-                            if (selected) {
+                            selected: _selectedFileTypes.contains(itinerary_model.FileType.image),
+                            selectedColor: const Color(0xFF48BB78),
+                            onSelected: (selected) {
                               setState(() {
-                                _selectedFileType = itinerary_model.FileType.none;
-                                _selectedFile = null;
-                                _fileName = null;
+                                if (selected) {
+                                  _selectedFileTypes.add(itinerary_model.FileType.image);
+                                } else {
+                                  _selectedFileTypes.remove(itinerary_model.FileType.image);
+                                }
                               });
-                            }
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text(
-                            'Image',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: _selectedFileType == itinerary_model.FileType.image ? Colors.white : const Color(0xFF718096),
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              'PDF',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: _selectedFileTypes.contains(itinerary_model.FileType.pdf) ? Colors.white : const Color(0xFF718096),
+                              ),
                             ),
-                          ),
-                          selected: _selectedFileType == itinerary_model.FileType.image,
-                          selectedColor: const Color(0xFF48BB78),
-                          onSelected: (selected) {
-                            if (selected) {
+                            selected: _selectedFileTypes.contains(itinerary_model.FileType.pdf),
+                            selectedColor: const Color(0xFF48BB78),
+                            onSelected: (selected) {
                               setState(() {
-                                _selectedFileType = itinerary_model.FileType.image;
+                                if (selected) {
+                                  _selectedFileTypes.add(itinerary_model.FileType.pdf);
+                                } else {
+                                  _selectedFileTypes.remove(itinerary_model.FileType.pdf);
+                                }
                               });
-                              _pickFile(_typeImage);
-                            }
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text(
-                            'PDF',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: _selectedFileType == itinerary_model.FileType.pdf ? Colors.white : const Color(0xFF718096),
+                            },
+                          ),
+                          FilterChip(
+                            label: Text(
+                              'DOCX',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: _selectedFileTypes.contains(itinerary_model.FileType.docx) ? Colors.white : const Color(0xFF718096),
+                              ),
                             ),
-                          ),
-                          selected: _selectedFileType == itinerary_model.FileType.pdf,
-                          selectedColor: const Color(0xFF48BB78),
-                          onSelected: (selected) {
-                            if (selected) {
+                            selected: _selectedFileTypes.contains(itinerary_model.FileType.docx),
+                            selectedColor: const Color(0xFF48BB78),
+                            onSelected: (selected) {
                               setState(() {
-                                _selectedFileType = itinerary_model.FileType.pdf;
+                                if (selected) {
+                                  _selectedFileTypes.add(itinerary_model.FileType.docx);
+                                } else {
+                                  _selectedFileTypes.remove(itinerary_model.FileType.docx);
+                                }
                               });
-                              _pickFile(_typeCustom, ['pdf']);
-                            }
-                          },
-                        ),
-                        ChoiceChip(
-                          label: Text(
-                            'DOCX',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: _selectedFileType == itinerary_model.FileType.docx ? Colors.white : const Color(0xFF718096),
-                            ),
+                            },
                           ),
-                          selected: _selectedFileType == itinerary_model.FileType.docx,
-                          selectedColor: const Color(0xFF48BB78),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedFileType = itinerary_model.FileType.docx;
-                              });
-                              _pickFile(_typeCustom, ['docx']);
-                            }
-                          },
-                        ),
                       ],
                     ),
                   ],
                 ),
                 
-                // Display selected file info
-                if (_selectedFile != null && _fileName != null) ...[
+                // Display selected files info
+                if (_selectedFiles.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF48BB78).withOpacity(0.3),
-                      ),
+                  Text(
+                    'Selected Files (${_selectedFiles.length}):',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF48BB78).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            _getFileTypeIcon(),
-                            color: const Color(0xFF48BB78),
-                            size: 24,
+                  ),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _selectedFiles.length,
+                    itemBuilder: (context, index) {
+                      final fileData = _selectedFiles[index];
+                      final File file = fileData['file'];
+                      final String fileName = fileData['fileName'];
+                      final itinerary_model.FileType fileType = fileData['fileType'];
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF48BB78).withOpacity(0.3),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _fileName!,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF48BB78).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              Text(
-                                '${(_selectedFile!.lengthSync() / 1024).toStringAsFixed(2)} KB',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
+                              child: Icon(
+                                _getFileTypeIcon(fileName),
+                                color: const Color(0xFF48BB78),
+                                size: 24,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    fileName,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${(file.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              color: Colors.grey.shade600,
+                              onPressed: () {
+                                setState(() {
+                                  _selectedFiles.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          color: Colors.grey.shade600,
-                          onPressed: () {
-                            setState(() {
-                              _selectedFile = null;
-                              _fileName = null;
-                              _selectedFileType = itinerary_model.FileType.none;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
                 
@@ -804,8 +909,14 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
     );
   }
   
-  // Helper method to pick a file
-  Future<void> _pickFile(picker.FileType type, [List<String>? allowedExtensions]) async {
+  // Pick files based on selected file types
+  Future<void> _pickFilesBasedOnSelectedTypes() async {
+    if (_selectedFileTypes.isEmpty) return;
+    
+    setState(() {
+      _isFileTypeSelectionMode = false;
+    });
+    
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
@@ -818,36 +929,56 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+
+      int totalFilesSelected = 0;
       
-      picker.FilePickerResult? result = await picker.FilePicker.platform.pickFiles(
-        type: type,
-        allowedExtensions: allowedExtensions,
-        allowMultiple: false,
-      );
-      
-      if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
-        setState(() {
-          _selectedFile = File(result.files.single.path!);
-          _fileName = path.basename(_selectedFile!.path);
-          
-          // Update the file type based on extension
-          if (_fileName!.endsWith('.jpg') ||
-              _fileName!.endsWith('.jpeg') ||
-              _fileName!.endsWith('.png') ||
-              _fileName!.endsWith('.gif')) {
-            _selectedFileType = itinerary_model.FileType.image;
-          } else if (_fileName!.endsWith('.pdf')) {
-            _selectedFileType = itinerary_model.FileType.pdf;
-          } else if (_fileName!.endsWith('.docx')) {
-            _selectedFileType = itinerary_model.FileType.docx;
-          }
-        });
+      // Handle image files
+      if (_selectedFileTypes.contains(itinerary_model.FileType.image)) {
+        picker.FilePickerResult? imageResult = await picker.FilePicker.platform.pickFiles(
+          type: picker.FileType.image,
+          allowMultiple: true,
+        );
         
-        // Show success message
+        if (imageResult != null && imageResult.files.isNotEmpty) {
+          totalFilesSelected += imageResult.files.length;
+          _processFiles(imageResult.files);
+        }
+      }
+      
+      // Handle PDF files
+      if (_selectedFileTypes.contains(itinerary_model.FileType.pdf)) {
+        picker.FilePickerResult? pdfResult = await picker.FilePicker.platform.pickFiles(
+          type: picker.FileType.custom,
+          allowedExtensions: ['pdf'],
+          allowMultiple: true,
+        );
+        
+        if (pdfResult != null && pdfResult.files.isNotEmpty) {
+          totalFilesSelected += pdfResult.files.length;
+          _processFiles(pdfResult.files);
+        }
+      }
+      
+      // Handle DOCX files
+      if (_selectedFileTypes.contains(itinerary_model.FileType.docx)) {
+        picker.FilePickerResult? docxResult = await picker.FilePicker.platform.pickFiles(
+          type: picker.FileType.custom,
+          allowedExtensions: ['docx'],
+          allowMultiple: true,
+        );
+        
+        if (docxResult != null && docxResult.files.isNotEmpty) {
+          totalFilesSelected += docxResult.files.length;
+          _processFiles(docxResult.files);
+        }
+      }
+      
+      // Show success message if any files were selected
+      if (totalFilesSelected > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'File selected: $_fileName',
+              '$totalFilesSelected file(s) selected',
               style: GoogleFonts.poppins(),
             ),
             backgroundColor: Colors.green,
@@ -855,11 +986,10 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
           ),
         );
       } else {
-        // User canceled the picker
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'No file selected',
+              'No files selected',
               style: GoogleFonts.poppins(),
             ),
             behavior: SnackBarBehavior.floating,
@@ -867,12 +997,12 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
         );
       }
     } catch (e) {
-      print('Error picking file: $e');
+      print('Error picking files: $e');
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Error selecting file: $e',
+            'Error selecting files: $e',
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: Colors.red,
@@ -882,18 +1012,49 @@ class _AddItineraryScreenState extends State<AddItineraryScreen> {
     }
   }
   
+  // Process selected files and add them to the list
+  void _processFiles(List<picker.PlatformFile> files) {
+    for (var platformFile in files) {
+      if (platformFile.path != null) {
+        File file = File(platformFile.path!);
+        String fileName = path.basename(file.path);
+        
+        // Determine file type based on extension
+        itinerary_model.FileType fileType;
+        if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ||
+            fileName.endsWith('.png') || fileName.endsWith('.gif')) {
+          fileType = itinerary_model.FileType.image;
+        } else if (fileName.endsWith('.pdf')) {
+          fileType = itinerary_model.FileType.pdf;
+        } else if (fileName.endsWith('.docx')) {
+          fileType = itinerary_model.FileType.docx;
+        } else {
+          // Default to image type if can't determine
+          fileType = itinerary_model.FileType.image;
+        }
+        
+        // Add to selected files list
+        setState(() {
+          _selectedFiles.add({
+            'file': file,
+            'fileName': fileName,
+            'fileType': fileType,
+          });
+        });
+      }
+    }
+  }
+  
   // Helper method to get icon based on file type
-  IconData _getFileTypeIcon() {
-    if (_fileName == null) return Icons.insert_drive_file_outlined;
-    
-    if (_fileName!.endsWith('.jpg') || 
-        _fileName!.endsWith('.jpeg') || 
-        _fileName!.endsWith('.png') ||
-        _fileName!.endsWith('.gif')) {
+  IconData _getFileTypeIcon(String fileName) {
+    if (fileName.endsWith('.jpg') ||
+        fileName.endsWith('.jpeg') ||
+        fileName.endsWith('.png') ||
+        fileName.endsWith('.gif')) {
       return Icons.image_outlined;
-    } else if (_fileName!.endsWith('.pdf')) {
+    } else if (fileName.endsWith('.pdf')) {
       return Icons.picture_as_pdf_outlined;
-    } else if (_fileName!.endsWith('.doc') || _fileName!.endsWith('.docx')) {
+    } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
       return Icons.description_outlined;
     } else {
       return Icons.insert_drive_file_outlined;
