@@ -248,7 +248,10 @@ class _HomeScreenState extends State<HomeScreen> {
           trips.remove(newTrip);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save trip: $e')),
+          SnackBar(
+            content: Text('Failed to save trip: $e'),
+            behavior: SnackBarBehavior.fixed,
+          ),
         );
       }
     }

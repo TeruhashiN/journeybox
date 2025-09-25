@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_file/open_file.dart';
 import '../database/db_helper.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
 import '../trip_files_itinerary/add_itinerary_screen.dart';
@@ -1063,15 +1064,14 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           // For images, open in a dialog with a full-screen option
           _showImagePreview(file, attachment.fileName);
         } else {
-          // For other file types, use URL launcher
-          final Uri fileUri = Uri.file(file.path);
+          // For PDF and DOCX files, use open_file plugin
           try {
-            final success = await launchUrl(fileUri);
-            if (!success) {
-              throw Exception('Could not launch file');
+            final result = await OpenFile.open(file.path);
+            if (result.type != ResultType.done) {
+              throw Exception('Could not open file: ${result.message}');
             }
           } catch (e) {
-            throw Exception('Could not launch file: $e');
+            throw Exception('Could not open file: $e');
           }
         }
       } else {
