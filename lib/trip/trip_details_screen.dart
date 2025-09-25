@@ -490,7 +490,12 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           child: _itineraries.isEmpty
               ? _buildEmptyItineraryState()
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  // Add bottom padding to prevent overlap with the FAB
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    bottom: 90
+                  ),
                   itemCount: _itineraries.length,
                   itemBuilder: (context, index) {
                     final itinerary = _itineraries[index];
