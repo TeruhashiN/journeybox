@@ -574,62 +574,78 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                       // Expandable description
                       _buildExpandableDescription(itinerary.description),
 
-                      // File attachment display (if any)
-                      if (itinerary.hasAttachment && itinerary.filePath != null) ...[
+                      // File attachments display (if any)
+                      if (itinerary.hasAttachments) ...[
                         const SizedBox(height: 16),
-                        InkWell(
-                          onTap: () => _openAttachment(itinerary),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFF667eea).withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
+                        Text(
+                          'Attachments (${itinerary.attachments.length}):',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF2D3748),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Column(
+                          children: itinerary.attachments.map((attachment) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: InkWell(
+                                onTap: () => _openAttachment(attachment),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF667eea).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFF667eea).withOpacity(0.3),
+                                    ),
                                   ),
-                                  child: _getFileTypeIcon(itinerary),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        itinerary.fileName ?? 'Attachment',
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF667eea).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        child: _getFileTypeIconForAttachment(attachment),
                                       ),
-                                      Text(
-                                        _getAttachmentTypeText(itinerary.fileType),
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              attachment.fileName,
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 14,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              _getAttachmentTypeText(attachment.fileType),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                      ),
+                                      const Icon(
+                                        Icons.open_in_new,
+                                        size: 20,
+                                        color: Color(0xFF667eea),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.open_in_new,
-                                  size: 20,
-                                  color: Color(0xFF667eea),
-                                ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
                       
@@ -980,19 +996,11 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     );
   }
 
-  // Helper method to get icon based on file type
-  Widget _getFileTypeIcon(Itinerary itinerary) {
-    if (itinerary.fileName == null) {
-      return const Icon(
-        Icons.insert_drive_file_outlined,
-        color: Color(0xFF667eea),
-        size: 24,
-      );
-    }
-    
+  // Helper method to get icon based on file attachment type
+  Widget _getFileTypeIconForAttachment(FileAttachment attachment) {
     IconData iconData;
     
-    switch (itinerary.fileType) {
+    switch (attachment.fileType) {
       case FileType.image:
         iconData = Icons.image_outlined;
         break;
@@ -1027,12 +1035,10 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     }
   }
   
-  // Open the attachment
-  void _openAttachment(Itinerary itinerary) async {
-    if (itinerary.filePath == null) return;
-    
+  // Open an attachment
+  void _openAttachment(FileAttachment attachment) async {
     try {
-      final file = File(itinerary.filePath!);
+      final file = File(attachment.filePath);
       if (await file.exists()) {
         // Show loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1047,19 +1053,28 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           ),
         );
         
-        // Launch file using URL launcher
-        final Uri fileUri = Uri.file(file.path);
-        try {
-          await launchUrl(fileUri);
-        } catch (e) {
-          throw Exception('Could not launch file: $e');
+        // Handle different file types appropriately
+        if (attachment.fileType == FileType.image) {
+          // For images, open in a dialog with a full-screen option
+          _showImagePreview(file, attachment.fileName);
+        } else {
+          // For other file types, use URL launcher
+          final Uri fileUri = Uri.file(file.path);
+          try {
+            final success = await launchUrl(fileUri);
+            if (!success) {
+              throw Exception('Could not launch file');
+            }
+          } catch (e) {
+            throw Exception('Could not launch file: $e');
+          }
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'File not found: ${itinerary.filePath}',
+                'File not found: ${attachment.filePath}',
                 style: GoogleFonts.poppins(),
               ),
               backgroundColor: Colors.red,
@@ -1084,5 +1099,74 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         );
       }
     }
+  }
+  
+  // Show image preview dialog
+  void _showImagePreview(File imageFile, String fileName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.all(10),
+          elevation: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                color: Colors.black54,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fileName,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  boundaryMargin: EdgeInsets.all(20),
+                  minScale: 0.5,
+                  maxScale: 4,
+                  child: Image.file(
+                    imageFile,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image, size: 48, color: Colors.white),
+                            SizedBox(height: 16),
+                            Text(
+                              'Could not load image',
+                              style: GoogleFonts.poppins(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

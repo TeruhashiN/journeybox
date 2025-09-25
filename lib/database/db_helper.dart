@@ -314,7 +314,7 @@ class DatabaseHelper {
       
       // Start a transaction
       await db.transaction((txn) async {
-        // Create a modified map for the itineraries table (without the attachments field)
+        // Create a modified map for the itineraries table (without any attachment fields)
         final Map<String, dynamic> itineraryMap = {
           'id': itinerary.id,
           'trip_id': itinerary.tripId,
@@ -324,9 +324,10 @@ class DatabaseHelper {
           'location': itinerary.location,
           'description': itinerary.description,
           'icon': itinerary.icon.codePoint.toString(),
-          'file_type': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.fileType.index : 0,
-          'file_path': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.filePath : null,
-          'file_name': itinerary.attachments.isNotEmpty ? itinerary.attachments.first.fileName : null,
+          // Set all file fields to null since we use the attachments table now
+          'file_type': 0,
+          'file_path': null,
+          'file_name': null,
         };
         
         // Update the itinerary

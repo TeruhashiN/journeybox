@@ -104,6 +104,7 @@ class Itinerary {
     return IconData(int.parse(iconCode), fontFamily: 'MaterialIcons');
   }
 
+  // For database storage - excludes complex objects like attachments list
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> map = {
       'id': id,
@@ -114,13 +115,21 @@ class Itinerary {
       'location': location,
       'description': description,
       'icon': _iconToString(),
-      'attachments': attachments.map((attachment) => attachment.toMap()).toList(),
+      // Don't include the attachments list as it can't be stored in SQLite
       
       // Include legacy fields for backward compatibility
       'file_type': attachments.isNotEmpty ? attachments.first.fileType.index : 0,
       'file_path': attachments.isNotEmpty ? attachments.first.filePath : null,
       'file_name': attachments.isNotEmpty ? attachments.first.fileName : null,
     };
+    return map;
+  }
+  
+  // For JSON serialization when needed
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> map = toMap();
+    // Add attachments for JSON serialization
+    map['attachments'] = attachments.map((attachment) => attachment.toMap()).toList();
     return map;
   }
 
