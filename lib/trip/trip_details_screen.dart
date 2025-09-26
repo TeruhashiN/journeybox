@@ -7,6 +7,9 @@ import '../database/db_helper.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
 import '../trip_files_itinerary/add_itinerary_screen.dart';
 import '../trip_files_itinerary/edit_itinerary_screen.dart';
+import '../trip_files_hotels/hotel_model.dart';
+import '../models/shared_models.dart';
+import '../trip_files_hotels/add_hotel_screen.dart';
 import '../text/expandable_text.dart';
 import 'trip_model.dart';
 
@@ -26,6 +29,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
   int _currentIndex = 0;
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Itinerary> _itineraries = [];
+  List<Hotel> _hotels = [];
   bool _isLoading = true;
 
   final List<String> _tabNames = [
@@ -66,17 +70,18 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         });
       }
     });
-    
-    // Load itineraries from database
+
+    // Load itineraries and hotels from database
     _loadItineraries();
+    _loadHotels();
   }
-  
+
   // Load itineraries for this trip
   Future<void> _loadItineraries() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final itineraries = await _dbHelper.getItinerariesForTrip(widget.trip.id);
       if (mounted) {
@@ -92,6 +97,20 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Load hotels for this trip
+  Future<void> _loadHotels() async {
+    try {
+      final hotels = await _dbHelper.getHotelsForTrip(widget.trip.id);
+      if (mounted) {
+        setState(() {
+          _hotels = hotels;
+        });
+      }
+    } catch (e) {
+      print('Error loading hotels: $e');
     }
   }
 
@@ -158,13 +177,16 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    widget.trip.daysLeft > 0 ? "${widget.trip.daysLeft} days left" : "Active Trip",
+                    widget.trip.daysLeft > 0
+                        ? "${widget.trip.daysLeft} days left"
+                        : "Active Trip",
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.white,
@@ -222,11 +244,15 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
               controller: _tabController,
               children: [
                 _buildItineraryTab(),
-                _buildPlaceholderTab("Hotels", "No hotel bookings added yet", Icons.hotel_outlined),
-                _buildPlaceholderTab("Flights", "No flight information added yet", Icons.flight_outlined),
-                _buildPlaceholderTab("Documents", "No documents uploaded yet", Icons.folder_outlined),
-                _buildPlaceholderTab("Expenses", "No expenses tracked yet", Icons.receipt_long_outlined),
-                _buildPlaceholderTab("Memories", "No memories captured yet", Icons.camera_alt_outlined),
+                _buildHotelsTab(),
+                _buildPlaceholderTab("Flights",
+                    "No flight information added yet", Icons.flight_outlined),
+                _buildPlaceholderTab("Documents", "No documents uploaded yet",
+                    Icons.folder_outlined),
+                _buildPlaceholderTab("Expenses", "No expenses tracked yet",
+                    Icons.receipt_long_outlined),
+                _buildPlaceholderTab("Memories", "No memories captured yet",
+                    Icons.camera_alt_outlined),
               ],
             ),
           ),
@@ -236,6 +262,8 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         onPressed: () {
           if (_currentIndex == 0) {
             _navigateToAddItineraryScreen();
+          } else if (_currentIndex == 1) {
+            _navigateToAddHotelScreen();
           } else {
             _showAddDialog(context);
           }
@@ -265,13 +293,27 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         builder: (context) => AddItineraryScreen(trip: widget.trip),
       ),
     );
-    
+
     // Refresh itineraries if a new one was added
     if (result == true) {
       _loadItineraries();
     }
   }
-  
+
+  Future<void> _navigateToAddHotelScreen() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddHotelScreen(trip: widget.trip),
+      ),
+    );
+
+    // Refresh hotels if a new one was added
+    if (result == true) {
+      _loadHotels();
+    }
+  }
+
   // Navigate to edit itinerary screen
   Future<void> _navigateToEditItineraryScreen(Itinerary itinerary) async {
     final result = await Navigator.push(
@@ -283,13 +325,13 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         ),
       ),
     );
-    
+
     // Refresh itineraries if an item was edited
     if (result == true) {
       _loadItineraries();
     }
   }
-  
+
   // Show delete confirmation dialog
   void _showDeleteConfirmationDialog(Itinerary itinerary) {
     showDialog(
@@ -374,7 +416,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
               // Delete the itinerary item
               try {
                 await _dbHelper.deleteItinerary(itinerary.id);
-                
+
                 if (mounted) {
                   // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -392,7 +434,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                       duration: const Duration(seconds: 2),
                     ),
                   );
-                  
+
                   // Close dialog and refresh
                   Navigator.pop(context);
                   _loadItineraries();
@@ -404,6 +446,156 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                     SnackBar(
                       content: Text(
                         'Error deleting itinerary: ${e.toString()}',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
+              }
+            },
+            icon: const Icon(Icons.delete, size: 18),
+            label: Text(
+              'Delete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show delete confirmation dialog for hotels
+  void _showDeleteHotelConfirmationDialog(Hotel hotel) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Delete Hotel',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF2D3748),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this hotel booking?',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: const Color(0xFF4A5568),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hotel.icon,
+                    size: 20,
+                    color: const Color(0xFF4299E1),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hotel.activity,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF2D3748),
+                          ),
+                        ),
+                        Text(
+                          '${hotel.day}, ${hotel.time}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF718096),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF718096),
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Delete the hotel item
+              try {
+                await _dbHelper.deleteHotel(hotel.id);
+
+                if (mounted) {
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Hotel deleted successfully',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+
+                  // Close dialog and refresh
+                  Navigator.pop(context);
+                  _loadHotels();
+                }
+              } catch (e) {
+                // Show error message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error deleting hotel: ${e.toString()}',
                         style: GoogleFonts.poppins(),
                       ),
                       backgroundColor: Colors.red,
@@ -492,246 +684,543 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
               ? _buildEmptyItineraryState()
               : ListView.builder(
                   // Add bottom padding to prevent overlap with the FAB
-                  padding: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    bottom: 90
-                  ),
+                  padding:
+                      const EdgeInsets.only(left: 20, right: 20, bottom: 90),
                   itemCount: _itineraries.length,
                   itemBuilder: (context, index) {
                     final itinerary = _itineraries[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF667eea).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              itinerary.icon,
-                              color: const Color(0xFF667eea),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  itinerary.activity,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF2D3748),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  itinerary.location,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: const Color(0xFF718096),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              itinerary.day,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: const Color(0xFF718096),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Time info
-                      Text(
-                        itinerary.time,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF48BB78),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Expandable description
-                      _buildExpandableDescription(itinerary.description),
-
-                      // File attachments display (if any)
-                      if (itinerary.hasAttachments) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          'Attachments (${itinerary.attachments.length}):',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF2D3748),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Column(
-                          children: itinerary.attachments.map((attachment) {
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: InkWell(
-                                onTap: () => _openAttachment(attachment),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: const Color(0xFF667eea).withOpacity(0.3),
-                                    ),
+                                    color: const Color(0xFF667eea)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Row(
+                                  child: Icon(
+                                    itinerary.icon,
+                                    color: const Color(0xFF667eea),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF667eea).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: _getFileTypeIconForAttachment(attachment),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              attachment.fileName,
-                                              style: GoogleFonts.poppins(
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 14,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            Text(
-                                              _getAttachmentTypeText(attachment.fileType),
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                          ],
+                                      Text(
+                                        itinerary.activity,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF2D3748),
                                         ),
                                       ),
-                                      const Icon(
-                                        Icons.open_in_new,
-                                        size: 20,
-                                        color: Color(0xFF667eea),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        itinerary.location,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF718096),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                      
-                      // Single settings menu button at bottom
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: PopupMenuButton<String>(
-                          icon: const Icon(
-                            Icons.settings,
-                            color: Color(0xFF718096),
-                            size: 18,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: EdgeInsets.zero,
-                          elevation: 4,
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _navigateToEditItineraryScreen(itinerary);
-                            } else if (value == 'delete') {
-                              _showDeleteConfirmationDialog(itinerary);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem<String>(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: const Icon(
-                                  Icons.edit_outlined,
-                                  color: Color(0xFF667eea),
-                                  size: 20,
-                                ),
-                                title: Text(
-                                  'Edit',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: const Color(0xFF2D3748),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    itinerary.day,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF718096),
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Time info
+                            Text(
+                              itinerary.time,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF48BB78),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            PopupMenuItem<String>(
-                              value: 'delete',
-                              child: ListTile(
-                                leading: const Icon(
-                                  Icons.delete_outline,
-                                  color: Color(0xFFE53E3E),
-                                  size: 20,
+                            const SizedBox(height: 8),
+                            // Expandable description
+                            _buildExpandableDescription(itinerary.description),
+
+                            // File attachments display (if any)
+                            if (itinerary.hasAttachments) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Attachments (${itinerary.attachments.length}):',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF2D3748),
                                 ),
-                                title: Text(
-                                  'Delete',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: const Color(0xFF2D3748),
+                              ),
+                              const SizedBox(height: 8),
+                              Column(
+                                children:
+                                    itinerary.attachments.map((attachment) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: InkWell(
+                                      onTap: () => _openAttachment(attachment),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: const Color(0xFF667eea)
+                                                .withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF667eea)
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child:
+                                                  _getFileTypeIconForAttachment(
+                                                      attachment),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    attachment.fileName,
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      fontSize: 14,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    _getAttachmentTypeText(
+                                                        attachment.fileType),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.open_in_new,
+                                              size: 20,
+                                              color: Color(0xFF667eea),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+
+                            // Single settings menu button at bottom
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: PopupMenuButton<String>(
+                                icon: const Icon(
+                                  Icons.settings,
+                                  color: Color(0xFF718096),
+                                  size: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.zero,
+                                elevation: 4,
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _navigateToEditItineraryScreen(itinerary);
+                                  } else if (value == 'delete') {
+                                    _showDeleteConfirmationDialog(itinerary);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      leading: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Color(0xFF667eea),
+                                        size: 20,
+                                      ),
+                                      title: Text(
+                                        'Edit',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF2D3748),
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: -4, vertical: -4),
+                                    ),
                                   ),
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                  PopupMenuItem<String>(
+                                    value: 'delete',
+                                    child: ListTile(
+                                      leading: const Icon(
+                                        Icons.delete_outline,
+                                        color: Color(0xFFE53E3E),
+                                        size: 20,
+                                      ),
+                                      title: Text(
+                                        'Delete',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF2D3748),
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: -4, vertical: -4),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
   }
-  
+
+  Widget _buildHotelsTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(
+                Icons.hotel_outlined,
+                color: const Color(0xFF4299E1),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Hotel Bookings',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _hotels.isEmpty
+              ? _buildEmptyHotelsState()
+              : ListView.builder(
+                  // Add bottom padding to prevent overlap with the FAB
+                  padding:
+                      const EdgeInsets.only(left: 20, right: 20, bottom: 90),
+                  itemCount: _hotels.length,
+                  itemBuilder: (context, index) {
+                    final hotel = _hotels[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4299E1)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    hotel.icon,
+                                    color: const Color(0xFF4299E1),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        hotel.activity,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF2D3748),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        hotel.location,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF718096),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    hotel.day,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF718096),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Time info
+                            Text(
+                              hotel.time,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF48BB78),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Expandable description
+                            _buildExpandableDescription(hotel.description),
+
+                            // File attachments display (if any)
+                            if (hotel.hasAttachments) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Attachments (${hotel.attachments.length}):',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF2D3748),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Column(
+                                children: hotel.attachments.map((attachment) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: InkWell(
+                                      onTap: () => _openAttachment(attachment),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: const Color(0xFF4299E1)
+                                                .withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF4299E1)
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child:
+                                                  _getFileTypeIconForAttachment(
+                                                      attachment),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    attachment.fileName,
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      fontSize: 14,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    _getAttachmentTypeText(
+                                                        attachment.fileType),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.open_in_new,
+                                              size: 20,
+                                              color: Color(0xFF4299E1),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+
+                            // Single settings menu button at bottom
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: PopupMenuButton<String>(
+                                icon: const Icon(
+                                  Icons.settings,
+                                  color: Color(0xFF718096),
+                                  size: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.zero,
+                                elevation: 4,
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    // TODO: Navigate to edit hotel screen
+                                  } else if (value == 'delete') {
+                                    _showDeleteHotelConfirmationDialog(hotel);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      leading: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Color(0xFF4299E1),
+                                        size: 20,
+                                      ),
+                                      title: Text(
+                                        'Edit',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF2D3748),
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: -4, vertical: -4),
+                                    ),
+                                  ),
+                                  PopupMenuItem<String>(
+                                    value: 'delete',
+                                    child: ListTile(
+                                      leading: const Icon(
+                                        Icons.delete_outline,
+                                        color: Color(0xFFE53E3E),
+                                        size: 20,
+                                      ),
+                                      title: Text(
+                                        'Delete',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF2D3748),
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: -4, vertical: -4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyItineraryState() {
     return Center(
       child: Column(
@@ -773,6 +1262,58 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
           const SizedBox(height: 24),
           Text(
             "Tap the + button to add your first itinerary item",
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: const Color(0xFF718096),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyHotelsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4299E1).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF4299E1).withOpacity(0.1),
+              ),
+            ),
+            child: const Icon(
+              Icons.hotel_outlined,
+              size: 56,
+              color: Color(0xFF4299E1),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Hotels',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D3748),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No hotel bookings added yet',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: const Color(0xFF718096),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Tap the + button to add your first hotel booking",
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: const Color(0xFF718096),
@@ -951,7 +1492,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
       ),
     );
   }
-  
+
   String _getAddDescription(String section) {
     switch (section) {
       case "Itinerary":
@@ -1003,10 +1544,13 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
   }
 
   // Helper method to get icon based on file attachment type
-  Widget _getFileTypeIconForAttachment(FileAttachment attachment) {
+  Widget _getFileTypeIconForAttachment(dynamic attachment) {
     IconData iconData;
-    
-    switch (attachment.fileType) {
+
+    // Handle both itinerary and hotel FileAttachment types
+    final fileType = attachment.fileType;
+
+    switch (fileType) {
       case FileType.image:
         iconData = Icons.image_outlined;
         break;
@@ -1019,16 +1563,16 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
       default:
         iconData = Icons.insert_drive_file_outlined;
     }
-    
+
     return Icon(
       iconData,
       color: const Color(0xFF667eea),
       size: 24,
     );
   }
-  
+
   // Helper method to get text description for file type
-  String _getAttachmentTypeText(FileType fileType) {
+  String _getAttachmentTypeText(dynamic fileType) {
     switch (fileType) {
       case FileType.image:
         return 'Image';
@@ -1040,7 +1584,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
         return 'File Attachment';
     }
   }
-  
+
   // Open an attachment
   void _openAttachment(FileAttachment attachment) async {
     try {
@@ -1058,7 +1602,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
             margin: const EdgeInsets.all(16),
           ),
         );
-        
+
         // Handle different file types appropriately
         if (attachment.fileType == FileType.image) {
           // For images, open in a dialog with a full-screen option
@@ -1105,7 +1649,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
       }
     }
   }
-  
+
   // Show image preview dialog
   void _showImagePreview(File imageFile, String fileName) {
     showDialog(
@@ -1155,7 +1699,8 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.broken_image, size: 48, color: Colors.white),
+                            Icon(Icons.broken_image,
+                                size: 48, color: Colors.white),
                             SizedBox(height: 16),
                             Text(
                               'Could not load image',

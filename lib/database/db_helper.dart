@@ -3,6 +3,9 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../trip/trip_model.dart';
 import '../trip_files_itinerary/itinerary_model.dart';
+// Add this import for hotel model
+import '../trip_files_hotels/hotel_model.dart' as hotel_model;
+import '../models/shared_models.dart';
 
 class DatabaseHelper {
   static DatabaseHelper? _databaseHelper;
@@ -24,7 +27,7 @@ class DatabaseHelper {
     print('Database path: $path');
     return await openDatabase(
       path,
-      version: 5, // Increment version for multiple file attachments support
+      version: 6, // Increment version for hotel support
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -46,7 +49,7 @@ class DatabaseHelper {
       )
     ''');
     print('Trip table created successfully');
-    
+
     // Create the itineraries table with file attachment support
     await db.execute('''
       CREATE TABLE itineraries(
@@ -65,8 +68,8 @@ class DatabaseHelper {
       )
     ''');
     print('Itineraries table created successfully');
-    
-    // Create a table for multiple file attachments
+
+    // Create a table for multiple file attachments for itineraries
     await db.execute('''
       CREATE TABLE itinerary_attachments(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,15 +81,45 @@ class DatabaseHelper {
       )
     ''');
     print('Itinerary attachments table created successfully');
+
+    // Create the hotels table
+    await db.execute('''
+      CREATE TABLE hotels(
+        id TEXT PRIMARY KEY,
+        trip_id TEXT NOT NULL,
+        day TEXT NOT NULL,
+        time TEXT NOT NULL,
+        activity TEXT NOT NULL,
+        location TEXT NOT NULL,
+        description TEXT NOT NULL,
+        icon TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
+      )
+    ''');
+    print('Hotels table created successfully');
+
+    // Create a table for multiple file attachments for hotels
+    await db.execute('''
+      CREATE TABLE hotel_attachments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hotel_id TEXT NOT NULL,
+        file_type INTEGER NOT NULL,
+        file_path TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        FOREIGN KEY (hotel_id) REFERENCES hotels (id) ON DELETE CASCADE
+      )
+    ''');
+    print('Hotel attachments table created successfully');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE trips ADD COLUMN start_date TEXT');
       await db.execute('ALTER TABLE trips ADD COLUMN end_date TEXT');
-      print('Migration to version 2 completed: added start_date and end_date columns');
+      print(
+          'Migration to version 2 completed: added start_date and end_date columns');
     }
-    
+
     if (oldVersion < 3) {
       // Create the itineraries table if upgrading from version 2
       await db.execute('''
@@ -107,20 +140,22 @@ class DatabaseHelper {
     ''');
       print('Migration to version 3 completed: added itineraries table');
     }
-    
+
     if (oldVersion < 4) {
       // Add file attachment columns to itineraries table
       try {
-        await db.execute('ALTER TABLE itineraries ADD COLUMN file_type INTEGER DEFAULT 0');
+        await db.execute(
+            'ALTER TABLE itineraries ADD COLUMN file_type INTEGER DEFAULT 0');
         await db.execute('ALTER TABLE itineraries ADD COLUMN file_path TEXT');
         await db.execute('ALTER TABLE itineraries ADD COLUMN file_name TEXT');
-        print('Migration to version 4 completed: added file attachment columns');
+        print(
+            'Migration to version 4 completed: added file attachment columns');
       } catch (e) {
         print('Error during migration to version 4: $e');
         // Handle migration errors
       }
     }
-    
+
     if (oldVersion < 5) {
       // Create a table for multiple file attachments
       await db.execute('''
@@ -133,13 +168,14 @@ class DatabaseHelper {
           FOREIGN KEY (itinerary_id) REFERENCES itineraries (id) ON DELETE CASCADE
         )
       ''');
-      
+
       // Migrate existing file attachments to the new table
       List<Map<String, dynamic>> existingItineraries = await db.query(
         'itineraries',
-        where: 'file_path IS NOT NULL AND file_name IS NOT NULL AND file_type > 0',
+        where:
+            'file_path IS NOT NULL AND file_name IS NOT NULL AND file_type > 0',
       );
-      
+
       for (var itinerary in existingItineraries) {
         await db.insert('itinerary_attachments', {
           'itinerary_id': itinerary['id'],
@@ -148,11 +184,44 @@ class DatabaseHelper {
           'file_name': itinerary['file_name'],
         });
       }
-      
-      print('Migration to version 5 completed: added support for multiple attachments');
+
+      print(
+          'Migration to version 5 completed: added support for multiple attachments');
+    }
+
+    if (oldVersion < 6) {
+      // Create the hotels table
+      await db.execute('''
+        CREATE TABLE hotels(
+          id TEXT PRIMARY KEY,
+          trip_id TEXT NOT NULL,
+          day TEXT NOT NULL,
+          time TEXT NOT NULL,
+          activity TEXT NOT NULL,
+          location TEXT NOT NULL,
+          description TEXT NOT NULL,
+          icon TEXT NOT NULL,
+          FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
+        )
+      ''');
+
+      // Create a table for multiple file attachments for hotels
+      await db.execute('''
+        CREATE TABLE hotel_attachments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          hotel_id TEXT NOT NULL,
+          file_type INTEGER NOT NULL,
+          file_path TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          FOREIGN KEY (hotel_id) REFERENCES hotels (id) ON DELETE CASCADE
+        )
+      ''');
+
+      print('Migration to version 6 completed: added hotel support');
     }
   }
 
+  // Trip-related methods
   Future<int> insertTrip(Trip trip) async {
     try {
       Database db = await database;
@@ -218,18 +287,18 @@ class DatabaseHelper {
       rethrow;
     }
   }
-  
+
   // Itinerary-related methods
   Future<int> insertItinerary(Itinerary itinerary) async {
     try {
       Database db = await database;
       print('Inserting itinerary: ${itinerary.toMap()}');
-      
+
       // Start a transaction to ensure all operations complete together
       await db.transaction((txn) async {
         // Insert the itinerary first
         await txn.insert('itineraries', itinerary.toMap());
-        
+
         // Insert all attachments if there are any
         if (itinerary.attachments.isNotEmpty) {
           for (var attachment in itinerary.attachments) {
@@ -242,7 +311,7 @@ class DatabaseHelper {
           }
         }
       });
-      
+
       return 1; // Return success
     } catch (e) {
       print('Insert itinerary failed: $e');
@@ -253,7 +322,7 @@ class DatabaseHelper {
   Future<List<Itinerary>> getItinerariesForTrip(String tripId) async {
     try {
       Database db = await database;
-      
+
       // Get all itineraries for this trip
       List<Map<String, dynamic>> itineraryMaps = await db.query(
         'itineraries',
@@ -262,10 +331,11 @@ class DatabaseHelper {
         orderBy: 'day ASC',
       );
       print('Queried ${itineraryMaps.length} itineraries for trip $tripId');
-      
+
       // Create list of itineraries with empty attachments
-      List<Itinerary> itineraries = itineraryMaps.map((map) => Itinerary.fromMap(map)).toList();
-      
+      List<Itinerary> itineraries =
+          itineraryMaps.map((map) => Itinerary.fromMap(map)).toList();
+
       // For each itinerary, load its attachments
       for (var itinerary in itineraries) {
         List<Map<String, dynamic>> attachmentMaps = await db.query(
@@ -273,7 +343,7 @@ class DatabaseHelper {
           where: 'itinerary_id = ?',
           whereArgs: [itinerary.id],
         );
-        
+
         // Convert the attachment maps to FileAttachment objects
         if (attachmentMaps.isNotEmpty) {
           List<FileAttachment> attachments = attachmentMaps.map((map) {
@@ -283,7 +353,7 @@ class DatabaseHelper {
               fileName: map['file_name'],
             );
           }).toList();
-          
+
           // Create a new itinerary with the attachments
           int index = itineraries.indexOf(itinerary);
           itineraries[index] = Itinerary(
@@ -299,7 +369,7 @@ class DatabaseHelper {
           );
         }
       }
-      
+
       return itineraries;
     } catch (e) {
       print('Load itineraries failed: $e');
@@ -311,7 +381,7 @@ class DatabaseHelper {
     try {
       Database db = await database;
       print('Updating itinerary: ${itinerary.id}');
-      
+
       // Start a transaction
       await db.transaction((txn) async {
         // Create a modified map for the itineraries table (without any attachment fields)
@@ -329,7 +399,7 @@ class DatabaseHelper {
           'file_path': null,
           'file_name': null,
         };
-        
+
         // Update the itinerary
         await txn.update(
           'itineraries',
@@ -337,14 +407,14 @@ class DatabaseHelper {
           where: 'id = ?',
           whereArgs: [itinerary.id],
         );
-        
+
         // Delete all existing attachments
         await txn.delete(
           'itinerary_attachments',
           where: 'itinerary_id = ?',
           whereArgs: [itinerary.id],
         );
-        
+
         // Insert new attachments
         for (var attachment in itinerary.attachments) {
           await txn.insert('itinerary_attachments', {
@@ -355,7 +425,7 @@ class DatabaseHelper {
           });
         }
       });
-      
+
       return 1; // Return success
     } catch (e) {
       print('Update itinerary failed: $e');
@@ -367,7 +437,7 @@ class DatabaseHelper {
     try {
       Database db = await database;
       print('Deleting itinerary with id: $id');
-      
+
       // The ON DELETE CASCADE constraint will automatically delete related attachments
       int rowsAffected = await db.delete(
         'itineraries',
@@ -381,7 +451,7 @@ class DatabaseHelper {
       rethrow;
     }
   }
-  
+
   // Delete all itineraries for a trip (usually when deleting a trip)
   Future<int> deleteItinerariesForTrip(String tripId) async {
     try {
@@ -398,28 +468,249 @@ class DatabaseHelper {
       print('Delete itineraries failed: $e');
       rethrow;
     }
-    
-    // Get all file attachments for a specific itinerary
-    Future<List<FileAttachment>> getAttachmentsForItinerary(String itineraryId) async {
-      try {
-        Database db = await database;
-        List<Map<String, dynamic>> maps = await db.query(
-          'itinerary_attachments',
-          where: 'itinerary_id = ?',
-          whereArgs: [itineraryId],
+  }
+
+  // Get all file attachments for a specific itinerary
+  Future<List<FileAttachment>> getAttachmentsForItinerary(
+      String itineraryId) async {
+    try {
+      Database db = await database;
+      List<Map<String, dynamic>> maps = await db.query(
+        'itinerary_attachments',
+        where: 'itinerary_id = ?',
+        whereArgs: [itineraryId],
+      );
+
+      return List.generate(maps.length, (i) {
+        return FileAttachment(
+          fileType: FileType.values[maps[i]['file_type']],
+          filePath: maps[i]['file_path'],
+          fileName: maps[i]['file_name'],
         );
-        
-        return List.generate(maps.length, (i) {
-          return FileAttachment(
-            fileType: FileType.values[maps[i]['file_type']],
-            filePath: maps[i]['file_path'],
-            fileName: maps[i]['file_name'],
+      });
+    } catch (e) {
+      print('Load attachments failed: $e');
+      return [];
+    }
+  }
+
+  // ============= HOTEL-RELATED METHODS =============
+
+  // Insert a new hotel
+  Future<int> insertHotel(hotel_model.Hotel hotel) async {
+    try {
+      Database db = await database;
+      print('Inserting hotel: ${hotel.toMap()}');
+
+      // Start a transaction to ensure all operations complete together
+      await db.transaction((txn) async {
+        // Create a modified map for the hotels table (without any attachment fields)
+        final Map<String, dynamic> hotelMap = {
+          'id': hotel.id,
+          'trip_id': hotel.tripId,
+          'day': hotel.day,
+          'time': hotel.time,
+          'activity': hotel.activity,
+          'location': hotel.location,
+          'description': hotel.description,
+          'icon': hotel.icon.codePoint.toString(),
+        };
+
+        // Insert the hotel first
+        await txn.insert('hotels', hotelMap);
+
+        // Insert all attachments if there are any
+        if (hotel.attachments.isNotEmpty) {
+          for (var attachment in hotel.attachments) {
+            await txn.insert('hotel_attachments', {
+              'hotel_id': hotel.id,
+              'file_type': attachment.fileType.index,
+              'file_path': attachment.filePath,
+              'file_name': attachment.fileName,
+            });
+          }
+        }
+      });
+
+      return 1; // Return success
+    } catch (e) {
+      print('Insert hotel failed: $e');
+      rethrow;
+    }
+  }
+
+  // Get all hotels for a specific trip
+  Future<List<hotel_model.Hotel>> getHotelsForTrip(String tripId) async {
+    try {
+      Database db = await database;
+
+      // Get all hotels for this trip
+      List<Map<String, dynamic>> hotelMaps = await db.query(
+        'hotels',
+        where: 'trip_id = ?',
+        whereArgs: [tripId],
+        orderBy: 'day ASC',
+      );
+      print('Queried ${hotelMaps.length} hotels for trip $tripId');
+
+      // Create list of hotels with empty attachments
+      List<hotel_model.Hotel> hotels =
+          hotelMaps.map((map) => hotel_model.Hotel.fromMap(map)).toList();
+
+      // For each hotel, load its attachments
+      for (var hotel in hotels) {
+        List<Map<String, dynamic>> attachmentMaps = await db.query(
+          'hotel_attachments',
+          where: 'hotel_id = ?',
+          whereArgs: [hotel.id],
+        );
+
+        // Convert the attachment maps to FileAttachment objects
+        if (attachmentMaps.isNotEmpty) {
+          List<hotel_model.FileAttachment> attachments =
+              attachmentMaps.map((map) {
+            return hotel_model.FileAttachment(
+              fileType: hotel_model.FileType.values[map['file_type']],
+              filePath: map['file_path'],
+              fileName: map['file_name'],
+            );
+          }).toList();
+
+          // Create a new hotel with the attachments
+          int index = hotels.indexOf(hotel);
+          hotels[index] = hotel_model.Hotel(
+            id: hotel.id,
+            tripId: hotel.tripId,
+            day: hotel.day,
+            time: hotel.time,
+            activity: hotel.activity,
+            location: hotel.location,
+            description: hotel.description,
+            icon: hotel.icon,
+            attachments: attachments,
           );
-        });
-      } catch (e) {
-        print('Load attachments failed: $e');
-        return [];
+        }
       }
+
+      return hotels;
+    } catch (e) {
+      print('Load hotels failed: $e');
+      return [];
+    }
+  }
+
+  // Update an existing hotel
+  Future<int> updateHotel(hotel_model.Hotel hotel) async {
+    try {
+      Database db = await database;
+      print('Updating hotel: ${hotel.id}');
+
+      // Start a transaction
+      await db.transaction((txn) async {
+        // Create a modified map for the hotels table
+        final Map<String, dynamic> hotelMap = {
+          'id': hotel.id,
+          'trip_id': hotel.tripId,
+          'day': hotel.day,
+          'time': hotel.time,
+          'activity': hotel.activity,
+          'location': hotel.location,
+          'description': hotel.description,
+          'icon': hotel.icon.codePoint.toString(),
+        };
+
+        // Update the hotel
+        await txn.update(
+          'hotels',
+          hotelMap,
+          where: 'id = ?',
+          whereArgs: [hotel.id],
+        );
+
+        // Delete all existing attachments
+        await txn.delete(
+          'hotel_attachments',
+          where: 'hotel_id = ?',
+          whereArgs: [hotel.id],
+        );
+
+        // Insert new attachments
+        for (var attachment in hotel.attachments) {
+          await txn.insert('hotel_attachments', {
+            'hotel_id': hotel.id,
+            'file_type': attachment.fileType.index,
+            'file_path': attachment.filePath,
+            'file_name': attachment.fileName,
+          });
+        }
+      });
+
+      return 1; // Return success
+    } catch (e) {
+      print('Update hotel failed: $e');
+      rethrow;
+    }
+  }
+
+  // Delete a hotel
+  Future<int> deleteHotel(String id) async {
+    try {
+      Database db = await database;
+      print('Deleting hotel with id: $id');
+
+      // The ON DELETE CASCADE constraint will automatically delete related attachments
+      int rowsAffected = await db.delete(
+        'hotels',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      print('Delete successful, rows affected: $rowsAffected');
+      return rowsAffected;
+    } catch (e) {
+      print('Delete hotel failed: $e');
+      rethrow;
+    }
+  }
+
+  // Delete all hotels for a trip (usually when deleting a trip)
+  Future<int> deleteHotelsForTrip(String tripId) async {
+    try {
+      Database db = await database;
+      print('Deleting all hotels for trip: $tripId');
+      int rowsAffected = await db.delete(
+        'hotels',
+        where: 'trip_id = ?',
+        whereArgs: [tripId],
+      );
+      print('Delete successful, rows affected: $rowsAffected');
+      return rowsAffected;
+    } catch (e) {
+      print('Delete hotels failed: $e');
+      rethrow;
+    }
+  }
+
+  // Get all file attachments for a specific hotel
+  Future<List<hotel_model.FileAttachment>> getAttachmentsForHotel(
+      String hotelId) async {
+    try {
+      Database db = await database;
+      List<Map<String, dynamic>> maps = await db.query(
+        'hotel_attachments',
+        where: 'hotel_id = ?',
+        whereArgs: [hotelId],
+      );
+
+      return List.generate(maps.length, (i) {
+        return hotel_model.FileAttachment(
+          fileType: hotel_model.FileType.values[maps[i]['file_type']],
+          filePath: maps[i]['file_path'],
+          fileName: maps[i]['file_name'],
+        );
+      });
+    } catch (e) {
+      print('Load hotel attachments failed: $e');
+      return [];
     }
   }
 }

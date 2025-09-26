@@ -3,7 +3,7 @@ import '../models/shared_models.dart';
 
 export '../models/shared_models.dart';
 
-class Itinerary {
+class Hotel {
   final String id;
   final String tripId;
   final String day;
@@ -22,7 +22,7 @@ class Itinerary {
   String? get fileName =>
       attachments.isNotEmpty ? attachments.first.fileName : null;
 
-  Itinerary({
+  Hotel({
     required this.id,
     required this.tripId,
     required this.day,
@@ -30,13 +30,14 @@ class Itinerary {
     required this.activity,
     required this.location,
     required this.description,
-    required this.icon,
+    IconData? icon,
     List<FileAttachment>? attachments,
     // Legacy parameters for backward compatibility
     FileType fileType = FileType.none,
     String? filePath,
     String? fileName,
-  }) : this.attachments =
+  })  : this.icon = icon ?? Icons.hotel,
+        this.attachments =
             _initializeAttachments(attachments, fileType, filePath, fileName);
 
   // Helper method to initialize attachments properly
@@ -103,7 +104,7 @@ class Itinerary {
     return map;
   }
 
-  factory Itinerary.fromMap(Map<String, dynamic> map) {
+  factory Hotel.fromMap(Map<String, dynamic> map) {
     // Handle both new and legacy formats
     List<FileAttachment> attachmentsList = [];
 
@@ -122,7 +123,7 @@ class Itinerary {
       ];
     }
 
-    return Itinerary(
+    return Hotel(
       id: map['id'],
       tripId: map['trip_id'],
       day: map['day'],
@@ -135,8 +136,8 @@ class Itinerary {
     );
   }
 
-  // Create a copy of this Itinerary with the given fields replaced with new values
-  Itinerary copyWith({
+  // Create a copy of this Hotel with the given fields replaced with new values
+  Hotel copyWith({
     String? id,
     String? tripId,
     String? day,
@@ -147,7 +148,7 @@ class Itinerary {
     IconData? icon,
     List<FileAttachment>? attachments,
   }) {
-    return Itinerary(
+    return Hotel(
       id: id ?? this.id,
       tripId: tripId ?? this.tripId,
       day: day ?? this.day,
@@ -160,7 +161,7 @@ class Itinerary {
     );
   }
 
-  // Helper method to check if this itinerary has any attachments
+  // Helper method to check if this hotel has any attachments
   bool get hasAttachments => attachments.isNotEmpty;
 
   // Legacy method for backward compatibility
