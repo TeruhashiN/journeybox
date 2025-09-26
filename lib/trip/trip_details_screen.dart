@@ -10,6 +10,7 @@ import '../trip_files_itinerary/edit_itinerary_screen.dart';
 import '../trip_files_hotels/hotel_model.dart';
 import '../models/shared_models.dart';
 import '../trip_files_hotels/add_hotel_screen.dart';
+import '../trip_files_hotels/edit_hotel_screen.dart';
 import '../text/expandable_text.dart';
 import 'trip_model.dart';
 
@@ -329,6 +330,24 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
     // Refresh itineraries if an item was edited
     if (result == true) {
       _loadItineraries();
+    }
+  }
+
+  // Navigate to edit hotel screen
+  Future<void> _navigateToEditHotelScreen(Hotel hotel) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditHotelScreen(
+          trip: widget.trip,
+          hotel: hotel,
+        ),
+      ),
+    );
+
+    // Refresh hotels if an item was edited
+    if (result == true) {
+      _loadHotels();
     }
   }
 
@@ -1159,7 +1178,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen>
                                 elevation: 4,
                                 onSelected: (value) {
                                   if (value == 'edit') {
-                                    // TODO: Navigate to edit hotel screen
+                                    _navigateToEditHotelScreen(hotel);
                                   } else if (value == 'delete') {
                                     _showDeleteHotelConfirmationDialog(hotel);
                                   }
