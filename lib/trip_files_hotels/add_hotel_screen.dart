@@ -20,7 +20,7 @@ class AddHotelScreen extends StatefulWidget {
 class _AddHotelScreenState extends State<AddHotelScreen> {
   final _formKey = GlobalKey<FormState>();
   final DatabaseHelper _dbHelper = DatabaseHelper();
-  
+
   // Form controllers
   final TextEditingController _dayController = TextEditingController();
   final TextEditingController _startTimeController = TextEditingController();
@@ -28,18 +28,18 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
   final TextEditingController _activityController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  
+
   // Time selection mode
   bool _isTimeRangeMode = false;
-  
+
   // Fixed icon for hotels
   IconData _selectedIcon = Icons.hotel;
-  
+
   // File attachments
   final List<Map<String, dynamic>> _selectedFiles = [];
   final Set<hotel_model.FileType> _selectedFileTypes = {};
   bool _isFileTypeSelectionMode = true;
-  
+
   // Aliases for file picker types
   static const _typeImage = picker.FileType.image;
   static const _typeCustom = picker.FileType.custom;
@@ -84,7 +84,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       // Generate a unique ID for the hotel
       String hotelId = const Uuid().v4();
-      
+
       // Create file attachment objects
       final attachments = _selectedFiles.map((fileData) {
         return hotel_model.FileAttachment(
@@ -106,11 +106,11 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         icon: _selectedIcon,
         attachments: attachments,
       );
-      
+
       try {
         // Save to database
         await _dbHelper.insertHotel(newHotel);
-        
+
         // Show success message and pop back
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -156,7 +156,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
   // Format time value based on mode
   String _formatTimeValue() {
     if (_isTimeRangeMode) {
-      if (_startTimeController.text.isNotEmpty && _endTimeController.text.isNotEmpty) {
+      if (_startTimeController.text.isNotEmpty &&
+          _endTimeController.text.isNotEmpty) {
         return '${_startTimeController.text} - ${_endTimeController.text}';
       } else {
         return _startTimeController.text;
@@ -175,7 +176,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF667eea),
+              primary: const Color(0xFF4299E1),
               onPrimary: Colors.white,
             ),
           ),
@@ -202,7 +203,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF667eea),
+              primary: const Color(0xFF4299E1),
               onPrimary: Colors.white,
             ),
           ),
@@ -231,7 +232,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: const Color(0xFF48BB78),
+        backgroundColor: const Color(0xFF4299E1),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -249,8 +250,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF48BB78),
-                        const Color(0xFF38A169),
+                        const Color(0xFF4299E1),
+                        const Color(0xFF3182CE),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -291,13 +292,13 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Form fields
                 _buildSectionTitle('Day Information'),
                 const SizedBox(height: 16),
-                
+
                 // Day field with range support
                 TextFormField(
                   controller: _dayController,
@@ -305,10 +306,11 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     'Day (e.g., 1, Day 1, or 1 to 3)',
                     Icons.calendar_today_outlined,
                     suffixIcon: const Tooltip(
-                      message: 'Enter day number, day range (e.g., 1 to 3), or "Day X"',
+                      message:
+                          'Enter day number, day range (e.g., 1 to 3), or "Day X"',
                       child: Icon(
                         Icons.info_outline,
-                        color: Color(0xFF48BB78),
+                        color: Color(0xFF4299E1),
                         size: 20,
                       ),
                     ),
@@ -321,9 +323,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Time selection mode toggle
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,11 +346,13 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                             'Check-in Time',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
-                              color: !_isTimeRangeMode ? Colors.white : const Color(0xFF718096),
+                              color: !_isTimeRangeMode
+                                  ? Colors.white
+                                  : const Color(0xFF718096),
                             ),
                           ),
                           selected: !_isTimeRangeMode,
-                          selectedColor: const Color(0xFF48BB78),
+                          selectedColor: const Color(0xFF4299E1),
                           onSelected: (selected) {
                             if (selected) {
                               setState(() {
@@ -362,11 +366,13 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                             'Check-in & Check-out',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
-                              color: _isTimeRangeMode ? Colors.white : const Color(0xFF718096),
+                              color: _isTimeRangeMode
+                                  ? Colors.white
+                                  : const Color(0xFF718096),
                             ),
                           ),
                           selected: _isTimeRangeMode,
-                          selectedColor: const Color(0xFF48BB78),
+                          selectedColor: const Color(0xFF4299E1),
                           onSelected: (selected) {
                             if (selected) {
                               setState(() {
@@ -379,9 +385,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Time picker section
                 Column(
                   children: [
@@ -397,19 +403,21 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                             Icons.access_time_outlined,
                             suffixIcon: Icon(
                               Icons.access_time,
-                              color: Theme.of(context).primaryColor,
+                              color: const Color(0xFF4299E1),
                             ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return _isTimeRangeMode ? 'Please enter check-in time' : 'Please enter time';
+                              return _isTimeRangeMode
+                                  ? 'Please enter check-in time'
+                                  : 'Please enter time';
                             }
                             return null;
                           },
                         ),
                       ),
                     ),
-                    
+
                     // End time field (Check-out time - only visible in range mode)
                     if (_isTimeRangeMode) ...[
                       const SizedBox(height: 16),
@@ -424,7 +432,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               Icons.access_time_outlined,
                               suffixIcon: Icon(
                                 Icons.access_time,
-                                color: Theme.of(context).primaryColor,
+                                color: const Color(0xFF4299E1),
                               ),
                             ),
                             validator: (value) {
@@ -439,16 +447,17 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     ],
                   ],
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 _buildSectionTitle('Hotel Details'),
                 const SizedBox(height: 16),
-                
+
                 // Hotel name field
                 TextFormField(
                   controller: _activityController,
-                  decoration: _buildInputDecoration('Hotel Name', Icons.hotel_outlined),
+                  decoration:
+                      _buildInputDecoration('Hotel Name', Icons.hotel_outlined),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter the hotel name';
@@ -456,13 +465,14 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Location field
                 TextFormField(
                   controller: _locationController,
-                  decoration: _buildInputDecoration('Location/Address', Icons.location_on_outlined),
+                  decoration: _buildInputDecoration(
+                      'Location/Address', Icons.location_on_outlined),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter the location';
@@ -470,13 +480,14 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Description field
                 TextFormField(
                   controller: _descriptionController,
-                  decoration: _buildInputDecoration('Notes/Description', Icons.description_outlined),
+                  decoration: _buildInputDecoration(
+                      'Notes/Description', Icons.description_outlined),
                   maxLines: 3,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -485,13 +496,13 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // File attachment section
                 _buildSectionTitle('Attach Files (Optional)'),
                 const SizedBox(height: 16),
-                
+
                 // File type selection
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,8 +514,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                       children: [
                         Text(
                           _isFileTypeSelectionMode
-                            ? 'Select File Type(s):'
-                            : 'Selected File Type(s):',
+                              ? 'Select File Type(s):'
+                              : 'Selected File Type(s):',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -519,14 +530,14 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                                 fontSize: 12,
                               ),
                             ),
-                            backgroundColor: const Color(0xFF48BB78),
+                            backgroundColor: const Color(0xFF4299E1),
                             padding: const EdgeInsets.all(0),
                           ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Action buttons
                     Wrap(
                       spacing: 8,
@@ -534,37 +545,35 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                       children: [
                         if (_isFileTypeSelectionMode)
                           ElevatedButton.icon(
-                            icon: const Icon(Icons.file_copy_outlined, size: 16),
+                            icon:
+                                const Icon(Icons.file_copy_outlined, size: 16),
                             label: Text(
                               'Pick Files',
                               style: GoogleFonts.poppins(fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF48BB78),
+                              backgroundColor: const Color(0xFF4299E1),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8
-                              ),
+                                  horizontal: 12, vertical: 8),
                             ),
                             onPressed: _selectedFileTypes.isEmpty
-                              ? null
-                              : _pickFilesBasedOnSelectedTypes,
+                                ? null
+                                : _pickFilesBasedOnSelectedTypes,
                           ),
                         if (!_isFileTypeSelectionMode)
                           ElevatedButton.icon(
-                            icon: const Icon(Icons.arrow_back_ios_new, size: 16),
+                            icon:
+                                const Icon(Icons.arrow_back_ios_new, size: 16),
                             label: Text(
                               'Back to Types',
                               style: GoogleFonts.poppins(fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF48BB78),
+                              backgroundColor: const Color(0xFF4299E1),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8
-                              ),
+                                  horizontal: 12, vertical: 8),
                             ),
                             onPressed: () {
                               setState(() {
@@ -572,7 +581,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               });
                             },
                           ),
-                        if (_selectedFiles.isNotEmpty || _selectedFileTypes.isNotEmpty)
+                        if (_selectedFiles.isNotEmpty ||
+                            _selectedFileTypes.isNotEmpty)
                           OutlinedButton.icon(
                             icon: const Icon(Icons.delete_outline, size: 16),
                             label: Text(
@@ -583,9 +593,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               foregroundColor: Colors.red,
                               side: const BorderSide(color: Colors.red),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8
-                              ),
+                                  horizontal: 12, vertical: 8),
                             ),
                             onPressed: () {
                               setState(() {
@@ -608,17 +616,23 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               'Image',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: _selectedFileTypes.contains(hotel_model.FileType.image) ? Colors.white : const Color(0xFF718096),
+                                color: _selectedFileTypes
+                                        .contains(hotel_model.FileType.image)
+                                    ? Colors.white
+                                    : const Color(0xFF718096),
                               ),
                             ),
-                            selected: _selectedFileTypes.contains(hotel_model.FileType.image),
-                            selectedColor: const Color(0xFF48BB78),
+                            selected: _selectedFileTypes
+                                .contains(hotel_model.FileType.image),
+                            selectedColor: const Color(0xFF4299E1),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
-                                  _selectedFileTypes.add(hotel_model.FileType.image);
+                                  _selectedFileTypes
+                                      .add(hotel_model.FileType.image);
                                 } else {
-                                  _selectedFileTypes.remove(hotel_model.FileType.image);
+                                  _selectedFileTypes
+                                      .remove(hotel_model.FileType.image);
                                 }
                               });
                             },
@@ -628,17 +642,23 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               'PDF',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: _selectedFileTypes.contains(hotel_model.FileType.pdf) ? Colors.white : const Color(0xFF718096),
+                                color: _selectedFileTypes
+                                        .contains(hotel_model.FileType.pdf)
+                                    ? Colors.white
+                                    : const Color(0xFF718096),
                               ),
                             ),
-                            selected: _selectedFileTypes.contains(hotel_model.FileType.pdf),
-                            selectedColor: const Color(0xFF48BB78),
+                            selected: _selectedFileTypes
+                                .contains(hotel_model.FileType.pdf),
+                            selectedColor: const Color(0xFF4299E1),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
-                                  _selectedFileTypes.add(hotel_model.FileType.pdf);
+                                  _selectedFileTypes
+                                      .add(hotel_model.FileType.pdf);
                                 } else {
-                                  _selectedFileTypes.remove(hotel_model.FileType.pdf);
+                                  _selectedFileTypes
+                                      .remove(hotel_model.FileType.pdf);
                                 }
                               });
                             },
@@ -648,17 +668,23 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               'DOCX',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: _selectedFileTypes.contains(hotel_model.FileType.docx) ? Colors.white : const Color(0xFF718096),
+                                color: _selectedFileTypes
+                                        .contains(hotel_model.FileType.docx)
+                                    ? Colors.white
+                                    : const Color(0xFF718096),
                               ),
                             ),
-                            selected: _selectedFileTypes.contains(hotel_model.FileType.docx),
-                            selectedColor: const Color(0xFF48BB78),
+                            selected: _selectedFileTypes
+                                .contains(hotel_model.FileType.docx),
+                            selectedColor: const Color(0xFF4299E1),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
-                                  _selectedFileTypes.add(hotel_model.FileType.docx);
+                                  _selectedFileTypes
+                                      .add(hotel_model.FileType.docx);
                                 } else {
-                                  _selectedFileTypes.remove(hotel_model.FileType.docx);
+                                  _selectedFileTypes
+                                      .remove(hotel_model.FileType.docx);
                                 }
                               });
                             },
@@ -667,7 +693,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                       ),
                   ],
                 ),
-                
+
                 // Display selected files info
                 if (_selectedFiles.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -687,8 +713,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                       final fileData = _selectedFiles[index];
                       final File file = fileData['file'];
                       final String fileName = fileData['fileName'];
-                      final hotel_model.FileType fileType = fileData['fileType'];
-                      
+                      final hotel_model.FileType fileType =
+                          fileData['fileType'];
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
@@ -696,7 +723,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color(0xFF48BB78).withOpacity(0.3),
+                            color: const Color(0xFF4299E1).withOpacity(0.3),
                           ),
                         ),
                         child: Row(
@@ -704,12 +731,12 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF48BB78).withOpacity(0.1),
+                                color: const Color(0xFF4299E1).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
                                 _getFileTypeIcon(fileName),
-                                color: const Color(0xFF48BB78),
+                                color: const Color(0xFF4299E1),
                                 size: 24,
                               ),
                             ),
@@ -752,9 +779,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     },
                   ),
                 ],
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Submit button
                 SizedBox(
                   width: double.infinity,
@@ -762,7 +789,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                   child: ElevatedButton(
                     onPressed: _submitForm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF48BB78),
+                      backgroundColor: const Color(0xFF4299E1),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -778,7 +805,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -801,7 +828,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
   }
 
   // Helper to build consistent input decoration
-  InputDecoration _buildInputDecoration(String label, IconData icon, {Widget? suffixIcon}) {
+  InputDecoration _buildInputDecoration(String label, IconData icon,
+      {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: GoogleFonts.poppins(
@@ -809,7 +837,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       ),
       prefixIcon: Icon(
         icon,
-        color: const Color(0xFF48BB78),
+        color: const Color(0xFF4299E1),
       ),
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
@@ -821,7 +849,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(
-          color: Color(0xFF48BB78),
+          color: Color(0xFF4299E1),
           width: 2,
         ),
       ),
@@ -839,15 +867,15 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       ),
     );
   }
-  
+
   // Pick files based on selected file types
   Future<void> _pickFilesBasedOnSelectedTypes() async {
     if (_selectedFileTypes.isEmpty) return;
-    
+
     setState(() {
       _isFileTypeSelectionMode = false;
     });
-    
+
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
@@ -862,48 +890,51 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       );
 
       int totalFilesSelected = 0;
-      
+
       // Handle image files
       if (_selectedFileTypes.contains(hotel_model.FileType.image)) {
-        picker.FilePickerResult? imageResult = await picker.FilePicker.platform.pickFiles(
+        picker.FilePickerResult? imageResult =
+            await picker.FilePicker.platform.pickFiles(
           type: picker.FileType.image,
           allowMultiple: true,
         );
-        
+
         if (imageResult != null && imageResult.files.isNotEmpty) {
           totalFilesSelected += imageResult.files.length;
           _processFiles(imageResult.files);
         }
       }
-      
+
       // Handle PDF files
       if (_selectedFileTypes.contains(hotel_model.FileType.pdf)) {
-        picker.FilePickerResult? pdfResult = await picker.FilePicker.platform.pickFiles(
+        picker.FilePickerResult? pdfResult =
+            await picker.FilePicker.platform.pickFiles(
           type: picker.FileType.custom,
           allowedExtensions: ['pdf'],
           allowMultiple: true,
         );
-        
+
         if (pdfResult != null && pdfResult.files.isNotEmpty) {
           totalFilesSelected += pdfResult.files.length;
           _processFiles(pdfResult.files);
         }
       }
-      
+
       // Handle DOCX files
       if (_selectedFileTypes.contains(hotel_model.FileType.docx)) {
-        picker.FilePickerResult? docxResult = await picker.FilePicker.platform.pickFiles(
+        picker.FilePickerResult? docxResult =
+            await picker.FilePicker.platform.pickFiles(
           type: picker.FileType.custom,
           allowedExtensions: ['docx'],
           allowMultiple: true,
         );
-        
+
         if (docxResult != null && docxResult.files.isNotEmpty) {
           totalFilesSelected += docxResult.files.length;
           _processFiles(docxResult.files);
         }
       }
-      
+
       // Show success message if any files were selected
       if (totalFilesSelected > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -942,18 +973,20 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       );
     }
   }
-  
+
   // Process selected files and add them to the list
   void _processFiles(List<picker.PlatformFile> files) {
     for (var platformFile in files) {
       if (platformFile.path != null) {
         File file = File(platformFile.path!);
         String fileName = path.basename(file.path);
-        
+
         // Determine file type based on extension
         hotel_model.FileType fileType;
-        if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ||
-            fileName.endsWith('.png') || fileName.endsWith('.gif')) {
+        if (fileName.endsWith('.jpg') ||
+            fileName.endsWith('.jpeg') ||
+            fileName.endsWith('.png') ||
+            fileName.endsWith('.gif')) {
           fileType = hotel_model.FileType.image;
         } else if (fileName.endsWith('.pdf')) {
           fileType = hotel_model.FileType.pdf;
@@ -963,7 +996,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
           // Default to image type if can't determine
           fileType = hotel_model.FileType.image;
         }
-        
+
         // Add to selected files list
         setState(() {
           _selectedFiles.add({
@@ -975,7 +1008,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       }
     }
   }
-  
+
   // Helper method to get icon based on file type
   IconData _getFileTypeIcon(String fileName) {
     if (fileName.endsWith('.jpg') ||
